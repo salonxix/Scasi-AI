@@ -300,6 +300,11 @@ CREATE POLICY "assistant_messages_update_via_session" ON public.assistant_messag
       SELECT 1 FROM public.assistant_sessions s
       WHERE s.id = assistant_messages.session_id AND s.user_id = (current_setting('app.user_id', true))::uuid
     )
+  ) WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.assistant_sessions s
+      WHERE s.id = assistant_messages.session_id AND s.user_id = auth.uid()
+    )
   );
 
 DROP POLICY IF EXISTS "assistant_messages_delete_via_session" ON public.assistant_messages;
