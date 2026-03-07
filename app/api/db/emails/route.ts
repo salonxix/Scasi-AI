@@ -27,11 +27,27 @@ export async function POST(req: Request) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const userId = getAppUserIdFromSession(session);
-  const body = await req.json();
+
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON in request body" }, { status: 400 });
+  }
+
+  const MAX_BATCH_SIZE = 100;
   const supabaseAdmin = getSupabaseAdmin();
 
   // Accept either a single email object or { emails: [...] }
-  const emails = Array.isArray(body?.emails) ? body.emails : [body];
+  const bodyAsRecord = body as Record<string, unknown>;
+  const emails: unknown[] = Array.isArray(bodyAsRecord?.emails) ? bodyAsRecord.emails : [body];
+
+  if (emails.length > MAX_BATCH_SIZE) {
+    return NextResponse.json(
+      { error: `Batch size exceeds maximum allowed (${MAX_BATCH_SIZE})` },
+      { status: 400 }
+    );
+  }
 
   const rows = emails
     .filter(Boolean)
