@@ -115,7 +115,7 @@ export type Database = {
         Row: {
           id: string;
           user_id: string;
-          gmail_id: string | null;
+          gmail_id: string;
           subject: string | null;
           from: string | null;
           date: string | null;
