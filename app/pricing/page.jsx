@@ -10,18 +10,18 @@ const DISPLAY = "'Playfair Display',serif";
 const BODY = "'Outfit',sans-serif";
 
 function ElegantCursor() {
-    const ringRef = useRef<HTMLDivElement>(null);
-    const dotRef = useRef<HTMLDivElement>(null);
+    const ringRef = useRef(null);
+    const dotRef = useRef(null);
     const pos = useRef({ x: -300, y: -300 });
     const lag = useRef({ x: -300, y: -300 });
 
     useEffect(() => {
-        const onMove = (e: MouseEvent) => {
+        const onMove = (e) => {
             pos.current = { x: e.clientX, y: e.clientY };
             if (dotRef.current)
                 dotRef.current.style.transform = `translate(${e.clientX - 3}px,${e.clientY - 3}px)`;
         };
-        let raf: number;
+        let raf;
         const loop = () => {
             raf = requestAnimationFrame(loop);
             lag.current.x += (pos.current.x - lag.current.x) * 0.09;
@@ -50,8 +50,8 @@ function ElegantCursor() {
     );
 }
 
-function NebulaBG({ style }: { style?: React.CSSProperties }) {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
+function NebulaBG({ style }) {
+    const canvasRef = useRef(null);
     const mouseRef = useRef({ x: 0, y: 0 });
 
     useEffect(() => {
@@ -60,38 +60,34 @@ function NebulaBG({ style }: { style?: React.CSSProperties }) {
         let W = window.innerWidth, H = canvas.offsetHeight || window.innerHeight;
         canvas.width = W; canvas.height = H;
 
-        const onMouse = (e: MouseEvent) => { mouseRef.current = { x: e.clientX, y: e.clientY }; };
+        const onMouse = (e) => { mouseRef.current = { x: e.clientX, y: e.clientY }; };
         window.addEventListener("mousemove", onMouse);
 
         const SHADES = ["rgba(124,58,237,", "rgba(168,85,247,", "rgba(196,130,255,", "rgba(88,28,199,", "rgba(147,51,234,"];
-        type Line = { x1: number; y1: number; x2: number; y2: number; progress: number; speed: number; color: string; width: number; opacity: number };
-        const lines: Line[] = Array.from({ length: 24 }, () => ({
+        const lines = Array.from({ length: 24 }, () => ({
             x1: Math.random() * W, y1: Math.random() * H, x2: Math.random() * W, y2: Math.random() * H,
             progress: Math.random(), speed: 0.001 + Math.random() * 0.0014,
             color: SHADES[Math.floor(Math.random() * SHADES.length)],
             width: Math.random() * 1.4 + 0.4, opacity: Math.random() * 0.3 + 0.07,
         }));
 
-        type Orb = { x: number; y: number; r: number; vx: number; vy: number; hue: number; opacity: number; phase: number };
-        const orbs: Orb[] = Array.from({ length: 6 }, () => ({
+        const orbs = Array.from({ length: 6 }, () => ({
             x: Math.random() * W, y: Math.random() * H * 0.8,
             r: 100 + Math.random() * 180, vx: (Math.random() - .5) * .3, vy: (Math.random() - .5) * .2,
             hue: 260 + Math.random() * 55, opacity: 0.07 + Math.random() * 0.09, phase: Math.random() * Math.PI * 2,
         }));
 
-        type Particle = { x: number; y: number; r: number; opacity: number; phase: number; speed: number; hue: number };
-        const particles: Particle[] = Array.from({ length: 500 }, () => ({
+        const particles = Array.from({ length: 500 }, () => ({
             x: Math.random() * W, y: Math.random() * H,
             r: Math.random() * .8 + .1, opacity: Math.random() * .45 + .1,
             phase: Math.random() * Math.PI * 2, speed: Math.random() * .02 + .005, hue: 250 + Math.random() * 80,
         }));
 
-        type Ripple = { x: number; y: number; r: number; maxR: number; opacity: number };
-        const ripples: Ripple[] = [];
-        const onClick = (e: MouseEvent) => { ripples.push({ x: e.clientX, y: e.clientY, r: 0, maxR: 80, opacity: 0.6 }); };
+        const ripples = [];
+        const onClick = (e) => { ripples.push({ x: e.clientX, y: e.clientY, r: 0, maxR: 80, opacity: 0.6 }); };
         window.addEventListener("click", onClick);
 
-        let t = 0, raf: number;
+        let t = 0, raf;
         const draw = () => {
             raf = requestAnimationFrame(draw); t += .012;
             ctx.clearRect(0, 0, W, H);
@@ -167,14 +163,13 @@ function NebulaBG({ style }: { style?: React.CSSProperties }) {
 }
 
 function NodeCanvas() {
-    const ref = useRef<HTMLCanvasElement>(null);
+    const ref = useRef(null);
     useEffect(() => {
         const c = ref.current; if (!c) return;
-        const ctx = c.getContext("2d")!;
+        const ctx = c.getContext("2d");
         let W = (c.width = c.offsetWidth), H = (c.height = c.offsetHeight);
-        type N = { x: number; y: number; vx: number; vy: number; ph: number };
-        const nodes: N[] = Array.from({ length: 55 }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * .38, vy: (Math.random() - .5) * .28, ph: Math.random() * Math.PI * 2 }));
-        let t = 0, raf: number;
+        const nodes = Array.from({ length: 55 }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * .38, vy: (Math.random() - .5) * .28, ph: Math.random() * Math.PI * 2 }));
+        let t = 0, raf;
         const draw = () => {
             raf = requestAnimationFrame(draw); t += .007;
             ctx.clearRect(0, 0, W, H);
@@ -200,18 +195,16 @@ function NodeCanvas() {
 }
 
 function NerveCanvas() {
-    const ref = useRef<HTMLCanvasElement>(null);
+    const ref = useRef(null);
     useEffect(() => {
         const c = ref.current; if (!c) return;
-        const ctx = c.getContext("2d")!;
+        const ctx = c.getContext("2d");
         let W = (c.width = c.offsetWidth), H = (c.height = c.offsetHeight);
-        type Pt = { x: number; y: number; vx: number; vy: number };
-        type NP = { pts: Pt[]; hue: number; opa: number; w: number; ph: number };
-        const paths: NP[] = Array.from({ length: 10 }, () => ({
+        const paths = Array.from({ length: 10 }, () => ({
             pts: Array.from({ length: 4 }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * .2, vy: (Math.random() - .5) * .16 })),
             hue: 255 + Math.random() * 50, opa: .04 + Math.random() * .06, w: .7 + Math.random() * 1.2, ph: Math.random() * Math.PI * 2,
         }));
-        let t = 0, raf: number;
+        let t = 0, raf;
         const draw = () => {
             raf = requestAnimationFrame(draw); t += .006;
             ctx.clearRect(0, 0, W, H);
@@ -241,7 +234,7 @@ function NerveCanvas() {
     return <canvas ref={ref} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }} />;
 }
 
-function WaveDown({ fromColor = "#ffffff", toColor = "#0f0b24" }: { fromColor?: string; toColor?: string }) {
+function WaveDown({ fromColor = "#ffffff", toColor = "#0f0b24" }) {
     return (
         <div style={{ background: fromColor, lineHeight: 0 }}>
             <svg viewBox="0 0 1440 70" preserveAspectRatio="none" style={{ display: "block", width: "100%", height: 70 }}>
@@ -250,7 +243,7 @@ function WaveDown({ fromColor = "#ffffff", toColor = "#0f0b24" }: { fromColor?: 
         </div>
     );
 }
-function WaveUp({ fromColor = "#0f0b24", toColor = "#ffffff" }: { fromColor?: string; toColor?: string }) {
+function WaveUp({ fromColor = "#0f0b24", toColor = "#ffffff" }) {
     return (
         <div style={{ background: fromColor, lineHeight: 0 }}>
             <svg viewBox="0 0 1440 70" preserveAspectRatio="none" style={{ display: "block", width: "100%", height: 70 }}>
@@ -260,7 +253,7 @@ function WaveUp({ fromColor = "#0f0b24", toColor = "#ffffff" }: { fromColor?: st
     );
 }
 
-function Chip({ label, dark }: { label: string; dark?: boolean }) {
+function Chip({ label, dark }) {
     return (
         <div style={{
             display: "inline-flex", alignItems: "center", gap: 7, borderRadius: 100, padding: "6px 18px", marginBottom: 20,
@@ -269,12 +262,12 @@ function Chip({ label, dark }: { label: string; dark?: boolean }) {
         }}>
             <motion.div animate={{ scale: [1, 1.55, 1] }} transition={{ duration: 2.2, repeat: Infinity }}
                 style={{ width: 6, height: 6, borderRadius: "50%", background: dark ? "#c084fc" : "#7c3aed" }} />
-            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase" as const, fontFamily: BODY, color: dark ? "#c084fc" : "#7c3aed" }}>{label}</span>
+            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", fontFamily: BODY, color: dark ? "#c084fc" : "#7c3aed" }}>{label}</span>
         </div>
     );
 }
 
-function GradText({ children }: { children: React.ReactNode }) {
+function GradText({ children }) {
     return (
         <span style={{
             background: "linear-gradient(135deg,#7c3aed 0%,#a855f7 50%,#c084fc 100%)",
@@ -285,7 +278,7 @@ function GradText({ children }: { children: React.ReactNode }) {
     );
 }
 
-function Tooltip({ text }: { text: string }) {
+function Tooltip({ text }) {
     const [show, setShow] = useState(false);
     return (
         <span style={{ position: "relative", display: "inline-flex", alignItems: "center", marginLeft: 5, cursor: "default" }}
@@ -301,7 +294,7 @@ function Tooltip({ text }: { text: string }) {
                             position: "absolute", bottom: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)",
                             background: "#1a1040", border: "1px solid rgba(124,58,237,.35)", borderRadius: 10,
                             padding: "8px 12px", width: 180, fontSize: 10, color: "#94a3b8", fontFamily: BODY, lineHeight: 1.6,
-                            zIndex: 100, boxShadow: "0 12px 40px rgba(0,0,0,.5)", whiteSpace: "normal" as const
+                            zIndex: 100, boxShadow: "0 12px 40px rgba(0,0,0,.5)", whiteSpace: "normal"
                         }}>
                         {text}
                     </motion.div>
@@ -311,8 +304,7 @@ function Tooltip({ text }: { text: string }) {
     );
 }
 
-function FeatureItem({ text, included, highlight, tooltip }:
-    { text: string; included: boolean; highlight?: boolean; tooltip?: string }) {
+function FeatureItem({ text, included, highlight, tooltip }) {
     return (
         <div style={{
             display: "flex", alignItems: "center", gap: 10, padding: "9px 0",
@@ -416,8 +408,8 @@ const plans = [
     },
 ];
 
-function PlanCard({ plan, yearly, idx }: { plan: typeof plans[0]; yearly: boolean; idx: number }) {
-    const ref = useRef<HTMLDivElement>(null);
+function PlanCard({ plan, yearly, idx }) {
+    const ref = useRef(null);
     const inView = useInView(ref, { once: true, margin: "-60px" });
     const isPro = plan.id === "pro";
     const isFree = plan.id === "free";
@@ -440,7 +432,7 @@ function PlanCard({ plan, yearly, idx }: { plan: typeof plans[0]; yearly: boolea
                 borderRadius: 28,
                 padding: "36px 30px 32px",
                 display: "flex",
-                flexDirection: "column" as const,
+                flexDirection: "column",
                 boxShadow: isPro
                     ? `0 0 0 1px rgba(124,58,237,.15), 0 30px 80px rgba(124,58,237,.25), inset 0 1px 0 rgba(255,255,255,.08)`
                     : `0 20px 60px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.04)`,
@@ -468,7 +460,7 @@ function PlanCard({ plan, yearly, idx }: { plan: typeof plans[0]; yearly: boolea
                     background: `linear-gradient(135deg,${plan.color},${plan.color}aa)`,
                     borderRadius: 100, padding: "4px 12px", fontSize: 9, color: "white",
                     fontWeight: 800, fontFamily: BODY, letterSpacing: 1.2,
-                    textTransform: "uppercase" as const,
+                    textTransform: "uppercase",
                     boxShadow: `0 4px 16px ${plan.glow}`
                 }}>
                     {plan.badge}
@@ -478,7 +470,7 @@ function PlanCard({ plan, yearly, idx }: { plan: typeof plans[0]; yearly: boolea
             {/* Plan name */}
             <div style={{
                 fontFamily: BODY, fontSize: 11, fontWeight: 800, letterSpacing: 2.5,
-                textTransform: "uppercase" as const, color: plan.color, marginBottom: 8
+                textTransform: "uppercase", color: plan.color, marginBottom: 8
             }}>{plan.name}</div>
 
             {/* Price */}
@@ -528,7 +520,7 @@ function PlanCard({ plan, yearly, idx }: { plan: typeof plans[0]; yearly: boolea
                     background: "rgba(255,255,255,.025)",
                     border: "1px solid rgba(255,255,255,.06)",
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 9,
-                    userSelect: "none" as const,
+                    userSelect: "none",
                 }}>
                     <motion.div
                         animate={{ opacity: [1, 0.35, 1] }}
@@ -541,7 +533,7 @@ function PlanCard({ plan, yearly, idx }: { plan: typeof plans[0]; yearly: boolea
                     />
                     <span style={{
                         fontFamily: BODY, fontWeight: 800, fontSize: 11,
-                        letterSpacing: 2, textTransform: "uppercase" as const,
+                        letterSpacing: 2, textTransform: "uppercase",
                         color: "rgba(255,255,255,.2)",
                     }}>
                         Coming Soon
@@ -556,7 +548,7 @@ function PlanCard({ plan, yearly, idx }: { plan: typeof plans[0]; yearly: boolea
             <div style={{ flex: 1 }}>
                 {plan.features.map((f, i) => (
                     <FeatureItem key={i} text={f.text} included={f.included}
-                        highlight={(f as any).highlight} tooltip={(f as any).tooltip} />
+                        highlight={f.highlight} tooltip={f.tooltip} />
                 ))}
             </div>
         </motion.div>
@@ -580,23 +572,23 @@ const tableRows = [
 ];
 
 function CompareTable() {
-    const ref = useRef<HTMLDivElement>(null);
+    const ref = useRef(null);
     const inView = useInView(ref, { once: true, margin: "-50px" });
     let lastCat = "";
 
     return (
-        <div ref={ref} style={{ overflowX: "auto" as const }}>
+        <div ref={ref} style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
                 <thead>
                     <tr>
                         <th style={{
-                            width: "40%", textAlign: "left" as const, padding: "14px 20px",
+                            width: "40%", textAlign: "left", padding: "14px 20px",
                             fontFamily: BODY, fontSize: 10, color: "#334155", fontWeight: 800, letterSpacing: 2,
-                            textTransform: "uppercase" as const, borderBottom: "1px solid rgba(255,255,255,.08)"
+                            textTransform: "uppercase", borderBottom: "1px solid rgba(255,255,255,.08)"
                         }}>Feature</th>
                         {["Free", "Pro", "Team"].map((h, i) => (
                             <th key={h} style={{
-                                width: "20%", textAlign: "center" as const, padding: "14px 8px",
+                                width: "20%", textAlign: "center", padding: "14px 8px",
                                 fontFamily: BODY, fontSize: 12, fontWeight: 800,
                                 color: i === 1 ? "#a78bfa" : i === 2 ? "#67e8f9" : "#475569",
                                 borderBottom: "1px solid rgba(255,255,255,.08)"
@@ -615,7 +607,7 @@ function CompareTable() {
                                         <td colSpan={4} style={{
                                             padding: "16px 20px 6px",
                                             fontFamily: BODY, fontSize: 9, fontWeight: 800, letterSpacing: 2.5,
-                                            textTransform: "uppercase" as const, color: "#334155"
+                                            textTransform: "uppercase", color: "#334155"
                                         }}>{row.cat}</td>
                                     </tr>
                                 )}
@@ -626,7 +618,7 @@ function CompareTable() {
                                     style={{ borderBottom: "1px solid rgba(255,255,255,.04)" }}>
                                     <td style={{ padding: "11px 20px", fontFamily: BODY, fontSize: 12, color: "#64748b" }}>{row.feat}</td>
                                     {[row.free, row.pro, row.team].map((v, j) => (
-                                        <td key={`cell-${i}-${j}`} style={{ textAlign: "center" as const, padding: "11px 8px" }}>
+                                        <td key={`cell-${i}-${j}`} style={{ textAlign: "center", padding: "11px 8px" }}>
                                             <span style={{
                                                 fontFamily: BODY, fontSize: 12,
                                                 color: v === "✓" ? "#22c55e" : v === "—" ? "rgba(255,255,255,.15)" : j === 1 ? "#c4b5fd" : j === 2 ? "#67e8f9" : "#64748b",
@@ -644,9 +636,9 @@ function CompareTable() {
     );
 }
 
-function FAQItem({ q, a, delay }: { q: string; a: string; delay: number }) {
+function FAQItem({ q, a, delay }) {
     const [open, setOpen] = useState(false);
-    const ref = useRef<HTMLDivElement>(null);
+    const ref = useRef(null);
     const inView = useInView(ref, { once: true });
     return (
         <motion.div ref={ref}
@@ -654,7 +646,7 @@ function FAQItem({ q, a, delay }: { q: string; a: string; delay: number }) {
             style={{ borderBottom: "1px solid rgba(255,255,255,.07)", overflow: "hidden" }}>
             <button onClick={() => setOpen(o => !o)}
                 style={{
-                    width: "100%", textAlign: "left" as const, padding: "20px 0",
+                    width: "100%", textAlign: "left", padding: "20px 0",
                     display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16,
                     background: "none", border: "none", cursor: "pointer"
                 }}>
@@ -742,7 +734,7 @@ export default function ScasiPricing() {
                 <motion.div animate={{ rotate: 360 }} transition={{ duration: 50, repeat: Infinity, ease: "linear" }}
                     style={{ position: "absolute", bottom: "10%", left: "6%", width: 180, height: 180, borderRadius: "50%", border: "1px solid rgba(124,58,237,.08)", zIndex: 2, pointerEvents: "none" }} />
 
-                <div style={{ position: "relative", zIndex: 10, textAlign: "center" as const, maxWidth: 780, padding: "120px 48px 80px" }}>
+                <div style={{ position: "relative", zIndex: 10, textAlign: "center", maxWidth: 780, padding: "120px 48px 80px" }}>
                     <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .6 }}>
                         <Chip label="Simple, transparent pricing" />
                     </motion.div>
@@ -797,9 +789,9 @@ export default function ScasiPricing() {
 
             {/* TRUST STRIP */}
             <div style={{ background: "#0d0922", padding: "0 40px 70px" }}>
-                <div style={{ maxWidth: 900, margin: "0 auto", textAlign: "center" as const }}>
-                    <p style={{ fontFamily: BODY, fontSize: 10, fontWeight: 700, letterSpacing: 2.5, textTransform: "uppercase" as const, color: "#334155", marginBottom: 28 }}>Trusted by 12,000+ professionals worldwide</p>
-                    <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap" as const, gap: 32 }}>
+                <div style={{ maxWidth: 900, margin: "0 auto", textAlign: "center" }}>
+                    <p style={{ fontFamily: BODY, fontSize: 10, fontWeight: 700, letterSpacing: 2.5, textTransform: "uppercase", color: "#334155", marginBottom: 28 }}>Trusted by 12,000+ professionals worldwide</p>
+                    <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 32 }}>
                         {trustItems.map((t, i) => (
                             <motion.div key={i}
                                 initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
@@ -818,7 +810,7 @@ export default function ScasiPricing() {
             <section style={{ position: "relative", overflow: "hidden", background: "#ffffff", padding: "96px 40px 80px" }}>
                 <NerveCanvas />
                 <div style={{ position: "relative", zIndex: 10, maxWidth: 860, margin: "0 auto" }}>
-                    <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} style={{ textAlign: "center" as const, marginBottom: 52 }}>
+                    <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} style={{ textAlign: "center", marginBottom: 52 }}>
                         <Chip label="Plan comparison" />
                         <h2 style={{ fontFamily: DISPLAY, fontWeight: 900, fontSize: "clamp(32px,4vw,54px)", letterSpacing: "-2px", lineHeight: 1.1, color: "#1e1b4b", marginBottom: 12 }}>
                             Every feature, side by side.
@@ -838,7 +830,7 @@ export default function ScasiPricing() {
             <section style={{ position: "relative", overflow: "hidden", background: "#0d0922", padding: "80px 40px 90px" }}>
                 <NodeCanvas />
                 <div style={{ position: "relative", zIndex: 10, maxWidth: 1060, margin: "0 auto" }}>
-                    <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} style={{ textAlign: "center" as const, marginBottom: 52 }}>
+                    <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} style={{ textAlign: "center", marginBottom: 52 }}>
                         <Chip label="Real users, real results" dark />
                         <h2 style={{ fontFamily: DISPLAY, fontWeight: 900, fontSize: "clamp(30px,3.5vw,50px)", letterSpacing: "-2px", lineHeight: 1.1, background: "linear-gradient(135deg,#e9d5ff,#c084fc,#a855f7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
                             What our users say.
@@ -846,7 +838,7 @@ export default function ScasiPricing() {
                     </motion.div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 22 }}>
                         {testimonials.map((t, i) => {
-                            const ref = useRef<HTMLDivElement>(null);
+                            const ref = useRef(null);
                             const inView = useInView(ref, { once: true });
                             return (
                                 <motion.div key={i} ref={ref}
@@ -876,7 +868,7 @@ export default function ScasiPricing() {
             <section style={{ position: "relative", overflow: "hidden", background: "#ffffff", padding: "90px 40px 80px" }}>
                 <NerveCanvas />
                 <div style={{ position: "relative", zIndex: 10, maxWidth: 700, margin: "0 auto" }}>
-                    <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} style={{ textAlign: "center" as const, marginBottom: 56 }}>
+                    <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} style={{ textAlign: "center", marginBottom: 56 }}>
                         <Chip label="Got questions?" />
                         <h2 style={{ fontFamily: DISPLAY, fontWeight: 900, fontSize: "clamp(30px,3.5vw,50px)", letterSpacing: "-2px", lineHeight: 1.1, color: "#1e1b4b" }}>
                             Frequently asked.
@@ -891,7 +883,7 @@ export default function ScasiPricing() {
             <section style={{ position: "relative", overflow: "hidden", background: "#0d0922" }}>
                 <NodeCanvas />
                 <div style={{ position: "absolute", top: "0%", left: "50%", transform: "translateX(-50%)", width: "60%", height: "100%", background: "radial-gradient(ellipse,rgba(124,58,237,.16) 0%,transparent 65%)", pointerEvents: "none", zIndex: 1 }} />
-                <div style={{ position: "relative", zIndex: 10, maxWidth: 700, margin: "0 auto", padding: "100px 48px 128px", textAlign: "center" as const }}>
+                <div style={{ position: "relative", zIndex: 10, maxWidth: 700, margin: "0 auto", padding: "100px 48px 128px", textAlign: "center" }}>
                     <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: .8 }}>
                         <Chip label="Start Today" dark />
                         <h2 style={{ fontFamily: DISPLAY, fontWeight: 900, fontSize: "clamp(36px,4.5vw,68px)", letterSpacing: "-2.5px", lineHeight: 1.05, background: "linear-gradient(160deg,#e9d5ff 0%,#c084fc 35%,#a855f7 65%,#7c3aed 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", marginBottom: 20 }}>
@@ -900,7 +892,7 @@ export default function ScasiPricing() {
                         <p style={{ fontFamily: BODY, fontSize: 15, color: "rgba(200,188,255,.6)", lineHeight: 1.85, marginBottom: 44, maxWidth: 460, margin: "0 auto 44px" }}>
                             Join 12,000+ professionals who've reclaimed their time, focus, and peace of mind with Scasi's AI.
                         </p>
-                        <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" as const }}>
+                        <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
                             <motion.button whileHover={{ scale: 1.05, boxShadow: "0 20px 60px rgba(124,58,237,.55)" }} whileTap={{ scale: .97 }}
                                 onClick={() => signIn("google", { callbackUrl: "/" })}
                                 style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", border: "none", borderRadius: 100, padding: "15px 40px", color: "white", fontWeight: 800, fontSize: 15, fontFamily: BODY, boxShadow: "0 8px 32px rgba(124,58,237,.4)", cursor: "pointer" }}>

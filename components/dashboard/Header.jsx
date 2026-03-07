@@ -25,14 +25,14 @@ function useActiveLink() {
    Magnetic Button Hook
 ─────────────────────────────────────────── */
 function useMagnetic(strength = 0.35) {
-    const ref = useRef<HTMLButtonElement>(null);
+    const ref = useRef(null);
     const x = useMotionValue(0);
     const y = useMotionValue(0);
 
     const sx = useSpring(x, { stiffness: 200, damping: 18 });
     const sy = useSpring(y, { stiffness: 200, damping: 18 });
 
-    const handleMouseMove = (e: React.MouseEvent) => {
+    const handleMouseMove = (e) => {
         const el = ref.current;
         if (!el) return;
 
@@ -61,7 +61,7 @@ const NAV_LINKS = [
 export default function Header() {
     const [time, setTime] = useState("");
     const [scrolled, setScrolled] = useState(false);
-    const [hovered, setHovered] = useState<string | null>(null);
+    const [hovered, setHovered] = useState(null);
     const [signingIn, setSigningIn] = useState(false);
 
     const active = useActiveLink();

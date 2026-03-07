@@ -105,11 +105,6 @@ function StatCard({
     value,
     change,
     color,
-}: {
-    label: string;
-    value: string;
-    change: string;
-    color: string;
 }) {
     return (
         <div
@@ -137,7 +132,7 @@ function StatCard({
         </div>
     );
 }
-function Recommendation({ text }: { text: string }) {
+function Recommendation({ text }) {
     return (
         <div
             style={{

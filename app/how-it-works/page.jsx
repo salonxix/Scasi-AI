@@ -13,34 +13,34 @@ const BODY = "'Outfit',sans-serif";
    MONOCHROME SVG ICONS  (white / soft purple only)
 ════════════════════════════════════════════════════ */
 const Icon = {
-    Mail: (p: any = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m2 7 10 7 10-7" /></svg>,
-    Bot: (p: any = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="10" rx="2" /><circle cx="12" cy="5" r="2" /><path d="M12 7v4" /><path d="M8 15h.01M12 15h.01M16 15h.01" /></svg>,
-    Zap: (p: any = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" /></svg>,
-    Lock: (p: any = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>,
-    Inbox: (p: any = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-6l-2 3H10l-2-3H2" /><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 17.76 4H6.24a2 2 0 0 0-1.79 1.11z" /></svg>,
-    BarChart: (p: any = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="20" x2="12" y2="10" /><line x1="18" y1="20" x2="18" y2="4" /><line x1="6" y1="20" x2="6" y2="16" /></svg>,
-    Star: (p: any = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>,
-    Shield: (p: any = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>,
-    Calendar: (p: any = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>,
-    Edit: (p: any = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>,
-    FileText: (p: any = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>,
-    Lightbulb: (p: any = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><line x1="9" y1="18" x2="15" y2="18" /><line x1="10" y1="22" x2="14" y2="22" /><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14" /></svg>,
-    Target: (p: any = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>,
-    Focus: (p: any = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>,
-    TrendUp: (p: any = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></svg>,
-    Code: (p: any = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>,
-    Globe: (p: any = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>,
-    Check: (p: any = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>,
-    Server: (p: any = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" /><rect x="2" y="14" width="20" height="8" rx="2" /><line x1="6" y1="6" x2="6.01" y2="6" /><line x1="6" y1="18" x2="6.01" y2="18" /></svg>,
-    Database: (p: any = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3" /><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" /><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" /></svg>,
-    Layers: (p: any = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" /></svg>,
-    Ban: (p: any = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" /></svg>,
-    Sparkle: (p: any = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.64 5.64l2.83 2.83M15.54 15.54l2.83 2.83M5.64 18.36l2.83-2.83M15.54 8.46l2.83-2.83" /></svg>,
-    ArrowRight: (p: any = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>,
+    Mail: (p = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m2 7 10 7 10-7" /></svg>,
+    Bot: (p = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="10" rx="2" /><circle cx="12" cy="5" r="2" /><path d="M12 7v4" /><path d="M8 15h.01M12 15h.01M16 15h.01" /></svg>,
+    Zap: (p = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" /></svg>,
+    Lock: (p = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>,
+    Inbox: (p = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-6l-2 3H10l-2-3H2" /><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 17.76 4H6.24a2 2 0 0 0-1.79 1.11z" /></svg>,
+    BarChart: (p = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="20" x2="12" y2="10" /><line x1="18" y1="20" x2="18" y2="4" /><line x1="6" y1="20" x2="6" y2="16" /></svg>,
+    Star: (p = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>,
+    Shield: (p = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>,
+    Calendar: (p = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>,
+    Edit: (p = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>,
+    FileText: (p = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>,
+    Lightbulb: (p = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><line x1="9" y1="18" x2="15" y2="18" /><line x1="10" y1="22" x2="14" y2="22" /><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14" /></svg>,
+    Target: (p = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>,
+    Focus: (p = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>,
+    TrendUp: (p = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></svg>,
+    Code: (p = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>,
+    Globe: (p = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>,
+    Check: (p = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>,
+    Server: (p = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" /><rect x="2" y="14" width="20" height="8" rx="2" /><line x1="6" y1="6" x2="6.01" y2="6" /><line x1="6" y1="18" x2="6.01" y2="18" /></svg>,
+    Database: (p = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3" /><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" /><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" /></svg>,
+    Layers: (p = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" /></svg>,
+    Ban: (p = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" /></svg>,
+    Sparkle: (p = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.64 5.64l2.83 2.83M15.54 15.54l2.83 2.83M5.64 18.36l2.83-2.83M15.54 8.46l2.83-2.83" /></svg>,
+    ArrowRight: (p = {}) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>,
 };
 
 /* icon box helper */
-function IBox({ icon: Ic, size = 36, bg = "rgba(255,255,255,.08)", color = "rgba(255,255,255,.8)", br = 12 }: { icon: React.ComponentType<any>; size?: number; bg?: string; color?: string; br?: number }) {
+function IBox({ icon: Ic, size = 36, bg = "rgba(255,255,255,.08)", color = "rgba(255,255,255,.8)", br = 12 }) {
     return (
         <div style={{ width: size, height: size, borderRadius: br, background: bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <Ic style={{ width: size * .46, height: size * .46, color }} />
@@ -52,11 +52,11 @@ function IBox({ icon: Ic, size = 36, bg = "rgba(255,255,255,.08)", color = "rgba
    ELEGANT CURSOR
 ════════════════════════════════════════════════════ */
 function ElegantCursor() {
-    const ringRef = useRef<HTMLDivElement>(null); const dotRef = useRef<HTMLDivElement>(null);
+    const ringRef = useRef(null); const dotRef = useRef(null);
     const pos = useRef({ x: -300, y: -300 }); const lag = useRef({ x: -300, y: -300 });
     useEffect(() => {
-        const onMove = (e: MouseEvent) => { pos.current = { x: e.clientX, y: e.clientY }; if (dotRef.current) dotRef.current.style.transform = `translate(${e.clientX - 3}px,${e.clientY - 3}px)`; };
-        let raf: number;
+        const onMove = (e) => { pos.current = { x: e.clientX, y: e.clientY }; if (dotRef.current) dotRef.current.style.transform = `translate(${e.clientX - 3}px,${e.clientY - 3}px)`; };
+        let raf;
         const loop = () => { raf = requestAnimationFrame(loop); lag.current.x += (pos.current.x - lag.current.x) * .09; lag.current.y += (pos.current.y - lag.current.y) * .09; if (ringRef.current) ringRef.current.style.transform = `translate(${lag.current.x - 20}px,${lag.current.y - 20}px)`; };
         loop(); document.addEventListener("mousemove", onMove);
         return () => { cancelAnimationFrame(raf); document.removeEventListener("mousemove", onMove); };
@@ -67,19 +67,19 @@ function ElegantCursor() {
 /* ════════════════════════════════════════════════════
    NEBULA BG
 ════════════════════════════════════════════════════ */
-function NebulaBG({ style: extStyle }: { style?: React.CSSProperties }) {
-    const canvasRef = useRef<HTMLCanvasElement>(null); const mouseRef = useRef({ x: 0, y: 0 });
+function NebulaBG({ style: extStyle }) {
+    const canvasRef = useRef(null); const mouseRef = useRef({ x: 0, y: 0 });
     useEffect(() => {
         const canvas = canvasRef.current; if (!canvas) return; const ctx = canvas.getContext("2d"); if (!ctx) return;
         let W = window.innerWidth, H = canvas.offsetHeight || window.innerHeight; canvas.width = W; canvas.height = H;
-        const onMouse = (e: MouseEvent) => { mouseRef.current = { x: e.clientX, y: e.clientY }; };
+        const onMouse = (e) => { mouseRef.current = { x: e.clientX, y: e.clientY }; };
         window.addEventListener("mousemove", onMouse);
         const SHADES = ["rgba(124,58,237,", "rgba(168,85,247,", "rgba(196,130,255,", "rgba(88,28,199,", "rgba(147,51,234,"];
         const lines = Array.from({ length: 24 }, () => ({ x1: Math.random() * W, y1: Math.random() * H, x2: Math.random() * W, y2: Math.random() * H, progress: Math.random(), speed: 0.001 + Math.random() * 0.0014, color: SHADES[Math.floor(Math.random() * SHADES.length)], width: Math.random() * 1.4 + 0.4, opacity: Math.random() * 0.3 + 0.07 }));
         const orbs = Array.from({ length: 6 }, () => ({ x: Math.random() * W, y: Math.random() * H * .8, r: 100 + Math.random() * 180, vx: (Math.random() - .5) * .3, vy: (Math.random() - .5) * .2, hue: 260 + Math.random() * 55, opacity: 0.07 + Math.random() * 0.09, phase: Math.random() * Math.PI * 2 }));
         const particles = Array.from({ length: 500 }, () => ({ x: Math.random() * W, y: Math.random() * H, r: Math.random() * .8 + .1, opacity: Math.random() * .45 + .1, phase: Math.random() * Math.PI * 2, speed: Math.random() * .02 + .005, hue: 250 + Math.random() * 80 }));
-        const ripples: Array<{ x: number; y: number; r: number; maxR: number; opacity: number }> = []; const onClick = (e: MouseEvent) => { ripples.push({ x: e.clientX, y: e.clientY, r: 0, maxR: 80, opacity: .6 }); }; window.addEventListener("click", onClick);
-        let t = 0, raf: number;
+        const ripples = []; const onClick = (e) => { ripples.push({ x: e.clientX, y: e.clientY, r: 0, maxR: 80, opacity: .6 }); }; window.addEventListener("click", onClick);
+        let t = 0, raf;
         const draw = () => {
             raf = requestAnimationFrame(draw); t += .012; ctx.clearRect(0, 0, W, H);
             for (const orb of orbs) { orb.x += orb.vx + Math.sin(t * .3 + orb.phase) * .4; orb.y += orb.vy + Math.cos(t * .2 + orb.phase) * .3; if (orb.x < -orb.r) orb.x = W + orb.r; if (orb.x > W + orb.r) orb.x = -orb.r; if (orb.y < -orb.r) orb.y = H + orb.r; if (orb.y > H + orb.r) orb.y = -orb.r; const pulse = 1 + Math.sin(t * .5 + orb.phase) * .12; const grd = ctx.createRadialGradient(orb.x, orb.y, 0, orb.x, orb.y, orb.r * pulse); grd.addColorStop(0, `hsla(${orb.hue},80%,70%,${orb.opacity * 1.4})`); grd.addColorStop(.5, `hsla(${orb.hue},70%,60%,${orb.opacity * .5})`); grd.addColorStop(1, `hsla(${orb.hue},60%,50%,0)`); ctx.beginPath(); ctx.arc(orb.x, orb.y, orb.r * pulse, 0, Math.PI * 2); ctx.fillStyle = grd; ctx.fill(); }
@@ -97,12 +97,12 @@ function NebulaBG({ style: extStyle }: { style?: React.CSSProperties }) {
 }
 
 function NodeCanvas() {
-    const ref = useRef<HTMLCanvasElement>(null);
+    const ref = useRef(null);
     useEffect(() => {
         const c = ref.current; if (!c) return; const ctx = c.getContext("2d"); if (!ctx) return;
         let W = (c.width = c.offsetWidth), H = (c.height = c.offsetHeight);
         const nodes = Array.from({ length: 55 }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * .38, vy: (Math.random() - .5) * .28, ph: Math.random() * Math.PI * 2 }));
-        let t = 0, raf: number;
+        let t = 0, raf;
         const draw = () => { raf = requestAnimationFrame(draw); t += .007; ctx.clearRect(0, 0, W, H); for (let i = 0; i < nodes.length; i++) { const a = nodes[i]; a.x += a.vx + Math.sin(t * .5 + a.ph) * .055; a.y += a.vy + Math.cos(t * .4 + a.ph) * .045; if (a.x < 0) a.x = W; if (a.x > W) a.x = 0; if (a.y < 0) a.y = H; if (a.y > H) a.y = 0; for (let j = i + 1; j < nodes.length; j++) { const b = nodes[j]; const dx = b.x - a.x, dy = b.y - a.y, d = Math.sqrt(dx * dx + dy * dy); if (d < 165) { ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.strokeStyle = `rgba(167,139,250,${(1 - d / 165) * .18})`; ctx.lineWidth = .65; ctx.stroke(); } } const pulse = (Math.sin(t * 1.3 + a.ph) + 1) * .5; ctx.beginPath(); ctx.arc(a.x, a.y, 1.4 + pulse * .8, 0, Math.PI * 2); ctx.fillStyle = `rgba(192,132,252,${.15 + pulse * .22})`; ctx.fill(); } };
         draw(); const onR = () => { W = c.width = c.offsetWidth; H = c.height = c.offsetHeight; }; window.addEventListener("resize", onR); return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", onR); };
     }, []);
@@ -110,12 +110,12 @@ function NodeCanvas() {
 }
 
 function NerveCanvas() {
-    const ref = useRef<HTMLCanvasElement>(null);
+    const ref = useRef(null);
     useEffect(() => {
         const c = ref.current; if (!c) return; const ctx = c.getContext("2d"); if (!ctx) return;
         let W = (c.width = c.offsetWidth), H = (c.height = c.offsetHeight);
         const paths = Array.from({ length: 10 }, () => ({ pts: Array.from({ length: 4 }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * .2, vy: (Math.random() - .5) * .16 })), hue: 255 + Math.random() * 50, opa: .04 + Math.random() * .06, w: .7 + Math.random() * 1.2, ph: Math.random() * Math.PI * 2 }));
-        let t = 0, raf: number;
+        let t = 0, raf;
         const draw = () => { raf = requestAnimationFrame(draw); t += .006; ctx.clearRect(0, 0, W, H); for (let gx = 0; gx < W; gx += 54)for (let gy = 0; gy < H; gy += 54) { ctx.beginPath(); ctx.arc(gx, gy, .9, 0, Math.PI * 2); ctx.fillStyle = "rgba(124,58,237,.04)"; ctx.fill(); } for (const p of paths) { for (const pt of p.pts) { pt.x += pt.vx + Math.sin(t * .3 + p.ph) * .05; pt.y += pt.vy + Math.cos(t * .25 + p.ph) * .04; if (pt.x < -60) pt.x = W + 60; if (pt.x > W + 60) pt.x = -60; if (pt.y < -60) pt.y = H + 60; if (pt.y > H + 60) pt.y = -60; } const pulse = (Math.sin(t * .9 + p.ph) + 1) * .5; const f = p.pts[0], l = p.pts[p.pts.length - 1]; const g = ctx.createLinearGradient(f.x, f.y, l.x, l.y); const a = p.opa * (.4 + pulse * .6); g.addColorStop(0, `hsla(${p.hue},80%,62%,0)`); g.addColorStop(.4, `hsla(${p.hue},80%,65%,${a})`); g.addColorStop(1, `hsla(${p.hue},72%,62%,0)`); ctx.beginPath(); ctx.moveTo(f.x, f.y); for (let i = 1; i < p.pts.length - 1; i++) { const mx = (p.pts[i].x + p.pts[i + 1].x) / 2, my = (p.pts[i].y + p.pts[i + 1].y) / 2; ctx.quadraticCurveTo(p.pts[i].x, p.pts[i].y, mx, my); } ctx.lineTo(l.x, l.y); ctx.strokeStyle = g; ctx.lineWidth = p.w; ctx.stroke(); } };
         draw(); const onR = () => { W = c.width = c.offsetWidth; H = c.height = c.offsetHeight; }; window.addEventListener("resize", onR); return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", onR); };
     }, []);
@@ -125,10 +125,10 @@ function NerveCanvas() {
 function WaveDown({ fromColor = "#ffffff", toColor = "#0d0922" }) { return (<div style={{ background: fromColor, lineHeight: 0 }}><svg viewBox="0 0 1440 70" preserveAspectRatio="none" style={{ display: "block", width: "100%", height: 70 }}><path d="M0,0 C480,70 960,70 1440,0 L1440,70 L0,70 Z" fill={toColor} /></svg></div>); }
 function WaveUp({ fromColor = "#0d0922", toColor = "#ffffff" }) { return (<div style={{ background: fromColor, lineHeight: 0 }}><svg viewBox="0 0 1440 70" preserveAspectRatio="none" style={{ display: "block", width: "100%", height: 70 }}><path d="M0,70 C480,0 960,0 1440,70 L1440,0 L0,0 Z" fill={toColor} /></svg></div>); }
 
-function Chip({ label, dark }: { label: string; dark?: boolean }) { return (<div style={{ display: "inline-flex", alignItems: "center", gap: 7, borderRadius: 100, padding: "6px 18px", marginBottom: 20, background: dark ? "rgba(192,132,252,.12)" : "rgba(124,58,237,.07)", border: dark ? "1px solid rgba(192,132,252,.25)" : "1px solid rgba(124,58,237,.18)" }}><motion.div animate={{ scale: [1, 1.55, 1] }} transition={{ duration: 2.2, repeat: Infinity }} style={{ width: 6, height: 6, borderRadius: "50%", background: dark ? "#c084fc" : "#7c3aed" }} /><span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", fontFamily: BODY, color: dark ? "#c084fc" : "#7c3aed" }}>{label}</span></div>); }
-function GradText({ children }: { children: React.ReactNode }) { return (<span style={{ background: "linear-gradient(135deg,#7c3aed 0%,#a855f7 50%,#c084fc 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>{children}</span>); }
-function Counter({ value, suffix = "" }: { value: string; suffix?: string }) {
-    const [count, setCount] = useState(0); const ref = useRef<HTMLSpanElement>(null); const inView = useInView(ref, { once: true });
+function Chip({ label, dark }) { return (<div style={{ display: "inline-flex", alignItems: "center", gap: 7, borderRadius: 100, padding: "6px 18px", marginBottom: 20, background: dark ? "rgba(192,132,252,.12)" : "rgba(124,58,237,.07)", border: dark ? "1px solid rgba(192,132,252,.25)" : "1px solid rgba(124,58,237,.18)" }}><motion.div animate={{ scale: [1, 1.55, 1] }} transition={{ duration: 2.2, repeat: Infinity }} style={{ width: 6, height: 6, borderRadius: "50%", background: dark ? "#c084fc" : "#7c3aed" }} /><span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", fontFamily: BODY, color: dark ? "#c084fc" : "#7c3aed" }}>{label}</span></div>); }
+function GradText({ children }) { return (<span style={{ background: "linear-gradient(135deg,#7c3aed 0%,#a855f7 50%,#c084fc 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>{children}</span>); }
+function Counter({ value, suffix = "" }) {
+    const [count, setCount] = useState(0); const ref = useRef(null); const inView = useInView(ref, { once: true });
     useEffect(() => { if (!inView) return; let s = 0; const e = parseInt(value); const step = e / (2000 / 16); const timer = setInterval(() => { s += step; if (s >= e) { setCount(e); clearInterval(timer); } else setCount(Math.floor(s)); }, 16); return () => clearInterval(timer); }, [inView, value]);
     return <span ref={ref}>{count}{suffix}</span>;
 }

@@ -3,11 +3,11 @@ import { authOptions } from "../auth/[...nextauth]/route";
 import { google } from "googleapis";
 import { NextResponse } from "next/server";
 
-export async function GET(req: Request) {
+export async function GET(req) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session || !(session as any).accessToken) {
+    if (!session || !session.accessToken) {
       return NextResponse.json({ emails: [], nextPageToken: null });
     }
 
@@ -16,7 +16,7 @@ export async function GET(req: Request) {
 
     const auth = new google.auth.OAuth2();
     auth.setCredentials({
-      access_token: (session as any).accessToken,
+      access_token: session.accessToken,
     });
 
     const gmail = google.gmail({ version: "v1", auth });
@@ -35,15 +35,15 @@ export async function GET(req: Request) {
       messages.map(async (m) => {
         const msg = await gmail.users.messages.get({
           userId: "me",
-          id: m.id!,
+          id: m.id,
           format: "metadata",
           metadataHeaders: ["Subject", "From", "Date"],
         });
 
         const headers = msg.data.payload?.headers || [];
 
-        const get = (name: string) =>
-          headers.find((h: any) => h.name === name)?.value || "";
+        const get = (name) =>
+          headers.find((h) => h.name === name)?.value || "";
 
         return {
           id: m.id,
@@ -65,7 +65,7 @@ export async function GET(req: Request) {
       emails,
       nextPageToken: listRes.data.nextPageToken || null,
     });
-  } catch (err: any) {
+  } catch (err) {
     return NextResponse.json({
       emails: [],
       nextPageToken: null,

@@ -9,17 +9,17 @@ import Footer from "@/components/Footer";
    ELEGANT CURSOR — ring + dot (matches screenshot)
 ───────────────────────────────────────────── */
 function ElegantCursor() {
-    const ringRef = useRef<HTMLDivElement>(null);
-    const dotRef = useRef<HTMLDivElement>(null);
+    const ringRef = useRef(null);
+    const dotRef = useRef(null);
     const pos = useRef({ x: -300, y: -300 });
     const lag = useRef({ x: -300, y: -300 });
     useEffect(() => {
-        const onMove = (e: MouseEvent) => {
+        const onMove = (e) => {
             pos.current = { x: e.clientX, y: e.clientY };
             if (dotRef.current)
                 dotRef.current.style.transform = `translate(${e.clientX - 3}px,${e.clientY - 3}px)`;
         };
-        let raf: number;
+        let raf;
         const loop = () => {
             raf = requestAnimationFrame(loop);
             lag.current.x += (pos.current.x - lag.current.x) * 0.09;
@@ -52,10 +52,10 @@ function ElegantCursor() {
    BG-A  Hero — soft lavender gradient mesh
 ───────────────────────────────────────────── */
 function HeroCanvas() {
-    const ref = useRef<HTMLCanvasElement>(null);
+    const ref = useRef(null);
     useEffect(() => {
         const c = ref.current; if (!c) return;
-        const ctx = c.getContext("2d")!;
+        const ctx = c.getContext("2d");
         let W = (c.width = c.offsetWidth);
         let H = (c.height = c.offsetHeight);
         const orbs = [
@@ -65,7 +65,7 @@ function HeroCanvas() {
             { x: .08, y: .12, r: 200, h: 272, a: .06, ph: .9 },
             { x: .5, y: .5, r: 260, h: 258, a: .05, ph: 2.1 },
         ];
-        let t = 0, raf: number;
+        let t = 0, raf;
         const draw = () => {
             raf = requestAnimationFrame(draw); t += .006;
             ctx.clearRect(0, 0, W, H);
@@ -93,15 +93,13 @@ function HeroCanvas() {
    BG-B  White sections — nerve paths + dot grid
 ───────────────────────────────────────────── */
 function NerveCanvas() {
-    const ref = useRef<HTMLCanvasElement>(null);
+    const ref = useRef(null);
     useEffect(() => {
         const c = ref.current; if (!c) return;
-        const ctx = c.getContext("2d")!;
+        const ctx = c.getContext("2d");
         let W = (c.width = c.offsetWidth);
         let H = (c.height = c.offsetHeight);
-        type Pt = { x: number; y: number; vx: number; vy: number };
-        type NPath = { pts: Pt[]; hue: number; opa: number; w: number; ph: number };
-        const paths: NPath[] = Array.from({ length: 12 }, () => ({
+        const paths = Array.from({ length: 12 }, () => ({
             pts: Array.from({ length: 4 }, () => ({
                 x: Math.random() * W, y: Math.random() * H,
                 vx: (Math.random() - .5) * .2, vy: (Math.random() - .5) * .16,
@@ -111,7 +109,7 @@ function NerveCanvas() {
             w: .7 + Math.random() * 1.3,
             ph: Math.random() * Math.PI * 2,
         }));
-        let t = 0, raf: number;
+        let t = 0, raf;
         const draw = () => {
             raf = requestAnimationFrame(draw); t += .006;
             ctx.clearRect(0, 0, W, H);
@@ -158,19 +156,18 @@ function NerveCanvas() {
    BG-C  Dark sections — node network
 ───────────────────────────────────────────── */
 function NodeCanvas() {
-    const ref = useRef<HTMLCanvasElement>(null);
+    const ref = useRef(null);
     useEffect(() => {
         const c = ref.current; if (!c) return;
-        const ctx = c.getContext("2d")!;
+        const ctx = c.getContext("2d");
         let W = (c.width = c.offsetWidth);
         let H = (c.height = c.offsetHeight);
-        type N = { x: number; y: number; vx: number; vy: number; ph: number };
-        const nodes: N[] = Array.from({ length: 55 }, () => ({
+        const nodes = Array.from({ length: 55 }, () => ({
             x: Math.random() * W, y: Math.random() * H,
             vx: (Math.random() - .5) * .38, vy: (Math.random() - .5) * .28,
             ph: Math.random() * Math.PI * 2,
         }));
-        let t = 0, raf: number;
+        let t = 0, raf;
         const draw = () => {
             raf = requestAnimationFrame(draw); t += .007;
             ctx.clearRect(0, 0, W, H);
@@ -208,14 +205,13 @@ function NodeCanvas() {
    BG-D  Comparison section — diagonal lines
 ───────────────────────────────────────────── */
 function DiagonalCanvas() {
-    const ref = useRef<HTMLCanvasElement>(null);
+    const ref = useRef(null);
     useEffect(() => {
         const c = ref.current; if (!c) return;
-        const ctx = c.getContext("2d")!;
+        const ctx = c.getContext("2d");
         let W = (c.width = c.offsetWidth);
         let H = (c.height = c.offsetHeight);
-        type Line = { x1: number; y1: number; x2: number; y2: number; ph: number; speed: number; opa: number; hue: number };
-        const lines: Line[] = Array.from({ length: 18 }, () => ({
+        const lines = Array.from({ length: 18 }, () => ({
             x1: Math.random() * W, y1: Math.random() * H,
             x2: Math.random() * W, y2: Math.random() * H,
             ph: Math.random() * Math.PI * 2,
@@ -223,7 +219,7 @@ function DiagonalCanvas() {
             opa: .03 + Math.random() * .07,
             hue: 255 + Math.random() * 50,
         }));
-        let t = 0, raf: number;
+        let t = 0, raf;
         const draw = () => {
             raf = requestAnimationFrame(draw); t += .01;
             ctx.clearRect(0, 0, W, H);
@@ -253,7 +249,7 @@ function DiagonalCanvas() {
 /* ─────────────────────────────────────────────
    VIDEO SLOT
 ───────────────────────────────────────────── */
-function VideoSlot({ label, sub }: { label: string; sub?: string }) {
+function VideoSlot({ label, sub }) {
     const [hov, setHov] = useState(false);
     return (
         <motion.div
@@ -301,7 +297,7 @@ function VideoSlot({ label, sub }: { label: string; sub?: string }) {
 /* ─────────────────────────────────────────────
    REUSABLE ATOMS
 ───────────────────────────────────────────── */
-function Chip({ label, dark }: { label: string; dark?: boolean }) {
+function Chip({ label, dark }) {
     return (
         <div style={{
             display: "inline-flex", alignItems: "center", gap: 7, borderRadius: 100, padding: "5px 15px", marginBottom: 20,
@@ -311,14 +307,14 @@ function Chip({ label, dark }: { label: string; dark?: boolean }) {
             <motion.div animate={{ scale: [1, 1.55, 1] }} transition={{ duration: 2.2, repeat: Infinity }}
                 style={{ width: 6, height: 6, borderRadius: "50%", background: dark ? "#c084fc" : "#7c3aed" }} />
             <span style={{
-                fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" as const, fontFamily: "'Outfit',sans-serif",
+                fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", fontFamily: "'Outfit',sans-serif",
                 color: dark ? "#c084fc" : "#7c3aed"
             }}>{label}</span>
         </div>
     );
 }
 
-function Heading({ children, dark }: { children: React.ReactNode; dark?: boolean }) {
+function Heading({ children, dark }) {
     return (
         <h2 style={{
             fontSize: "clamp(30px,3vw,50px)", fontWeight: 900, letterSpacing: "-1.8px", lineHeight: 1.08,
@@ -328,7 +324,7 @@ function Heading({ children, dark }: { children: React.ReactNode; dark?: boolean
     );
 }
 
-function Sub({ children, dark, center }: { children: React.ReactNode; dark?: boolean; center?: boolean }) {
+function Sub({ children, dark, center }) {
     return (
         <p style={{
             fontSize: 16, lineHeight: 1.8, fontFamily: "'Outfit',sans-serif", marginBottom: 52,
@@ -339,7 +335,7 @@ function Sub({ children, dark, center }: { children: React.ReactNode; dark?: boo
     );
 }
 
-function GradText({ children }: { children: React.ReactNode }) {
+function GradText({ children }) {
     return (
         <span style={{
             background: "linear-gradient(135deg,#7c3aed 0%,#a855f7 45%,#c084fc 85%)",
@@ -350,7 +346,7 @@ function GradText({ children }: { children: React.ReactNode }) {
     );
 }
 
-function Check({ text, dark, accent = "#7c3aed", delay = 0, show }: { text: string; dark?: boolean; accent?: string; delay?: number; show: boolean }) {
+function Check({ text, dark, accent = "#7c3aed", delay = 0, show }) {
     return (
         <motion.div initial={{ opacity: 0, x: -14 }} animate={show ? { opacity: 1, x: 0 } : {}} transition={{ delay, duration: .45 }}
             style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
@@ -378,9 +374,7 @@ const W_MAX = { maxWidth: 1160, margin: "0 auto", padding: "0 52px" };
 /* ─────────────────────────────────────────────
    FEATURE ROW — alternating, light bg
 ───────────────────────────────────────────── */
-function FRow({ chip, head, sub, bullets, vLabel, vSub, flip, accent = "#7c3aed" }: {
-    chip: string; head: React.ReactNode; sub: string; bullets: string[]; vLabel: string; vSub?: string; flip?: boolean; accent?: string;
-}) {
+function FRow({ chip, head, sub, bullets, vLabel, vSub, flip, accent = "#7c3aed" }) {
     const ref = useRef(null);
     const iv = useInView(ref, { once: true, margin: "-80px" });
     return (
@@ -402,9 +396,7 @@ function FRow({ chip, head, sub, bullets, vLabel, vSub, flip, accent = "#7c3aed"
 }
 
 /* Feature row — dark bg */
-function FRowDark({ chip, head, sub, bullets, vLabel, vSub, flip, accent = "#c084fc" }: {
-    chip: string; head: React.ReactNode; sub: string; bullets: string[]; vLabel: string; vSub?: string; flip?: boolean; accent?: string;
-}) {
+function FRowDark({ chip, head, sub, bullets, vLabel, vSub, flip, accent = "#c084fc" }) {
     const ref = useRef(null);
     const iv = useInView(ref, { once: true, margin: "-80px" });
     return (
@@ -428,7 +420,7 @@ function FRowDark({ chip, head, sub, bullets, vLabel, vSub, flip, accent = "#c08
 /* ─────────────────────────────────────────────
    MINI CARD
 ───────────────────────────────────────────── */
-function Card({ icon, title, desc, delay = 0, dark }: { icon: string; title: string; desc: string; delay?: number; dark?: boolean }) {
+function Card({ icon, title, desc, delay = 0, dark }) {
     const ref = useRef(null);
     const iv = useInView(ref, { once: true, margin: "-30px" });
     const [hov, setHov] = useState(false);
@@ -515,8 +507,8 @@ function CompareTable() {
             <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1.2fr", background: "linear-gradient(135deg,#1e1b4b,#2d1f63)", padding: "22px 32px" }}>
                 {["Feature", "Gmail", "Outlook", "Scasi"].map((h, i) => (
                     <div key={i} style={{
-                        fontSize: 11, fontWeight: 700, letterSpacing: .9, textTransform: "uppercase" as const, fontFamily: "'Outfit',sans-serif",
-                        color: i === 3 ? "#c084fc" : "rgba(255,255,255,.5)", textAlign: i > 0 ? "center" as const : "left" as const
+                        fontSize: 11, fontWeight: 700, letterSpacing: .9, textTransform: "uppercase", fontFamily: "'Outfit',sans-serif",
+                        color: i === 3 ? "#c084fc" : "rgba(255,255,255,.5)", textAlign: i > 0 ? "center" : "left"
                     }}>{h}</div>
                 ))}
             </div>
@@ -528,7 +520,7 @@ function CompareTable() {
                     }}>
                     <div style={{ fontSize: 14, fontWeight: 600, color: "#1e1b4b", fontFamily: "'Outfit',sans-serif" }}>{row[0]}</div>
                     {[row[1], row[2], row[3]].map((v, ci) => (
-                        <div key={ci} style={{ textAlign: "center" as const }}>
+                        <div key={ci} style={{ textAlign: "center" }}>
                             {v === false
                                 ? <span style={{ color: "#d1d5db", fontSize: 20, fontWeight: 200 }}>—</span>
                                 : v === true
@@ -561,14 +553,14 @@ const TECH = [
     { l: "15 Endpoints", s: "API Surface" }, { l: "0 Errors", s: "Build Quality" },
     { l: "OAuth 2.0", s: "Auth Standard" }, { l: "Turbopack", s: "Build Speed" }, { l: "WCAG AA", s: "Accessibility" },
 ];
-function TechPill({ l, s, i }: { l: string; s: string; i: number }) {
+function TechPill({ l, s, i }) {
     const ref = useRef(null); const iv = useInView(ref, { once: true });
     const [hov, setHov] = useState(false);
     return (
         <motion.div ref={ref} initial={{ opacity: 0, y: 18 }} animate={iv ? { opacity: 1, y: 0 } : {}} transition={{ delay: i * .05, duration: .44 }}
             onHoverStart={() => setHov(true)} onHoverEnd={() => setHov(false)}
             style={{
-                borderRadius: 16, padding: "20px 16px", textAlign: "center" as const, cursor: "none", transition: "all .25s",
+                borderRadius: 16, padding: "20px 16px", textAlign: "center", cursor: "none", transition: "all .25s",
                 background: hov ? "rgba(167,139,250,.12)" : "rgba(255,255,255,.04)",
                 border: hov ? "1px solid rgba(192,132,252,.3)" : "1px solid rgba(255,255,255,.07)",
                 boxShadow: hov ? "0 0 32px rgba(124,58,237,.12)" : "none"
@@ -582,7 +574,7 @@ function TechPill({ l, s, i }: { l: string; s: string; i: number }) {
 /* ─────────────────────────────────────────────
    WAVE DIVIDER between light and dark
 ───────────────────────────────────────────── */
-function WaveDown({ fromColor = "#ffffff", toColor = "#120c28" }: { fromColor?: string; toColor?: string }) {
+function WaveDown({ fromColor = "#ffffff", toColor = "#120c28" }) {
     return (
         <div style={{ background: fromColor, lineHeight: 0, display: "block" }}>
             <svg viewBox="0 0 1440 70" preserveAspectRatio="none" style={{ display: "block", width: "100%", height: 70 }}>
@@ -591,7 +583,7 @@ function WaveDown({ fromColor = "#ffffff", toColor = "#120c28" }: { fromColor?: 
         </div>
     );
 }
-function WaveUp({ fromColor = "#120c28", toColor = "#ffffff" }: { fromColor?: string; toColor?: string }) {
+function WaveUp({ fromColor = "#120c28", toColor = "#ffffff" }) {
     return (
         <div style={{ background: fromColor, lineHeight: 0, display: "block" }}>
             <svg viewBox="0 0 1440 70" preserveAspectRatio="none" style={{ display: "block", width: "100%", height: 70 }}>
@@ -685,7 +677,7 @@ export default function FeaturesPage() {
                     <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 52 }}>
                         <div style={{ width: 3, height: 52, borderRadius: 99, background: "linear-gradient(180deg,#7c3aed,#a855f7)" }} />
                         <div>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed", letterSpacing: 1.2, textTransform: "uppercase" as const, fontFamily: "'Outfit',sans-serif", marginBottom: 4 }}>Feature 01 — Priority Engine</div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed", letterSpacing: 1.2, textTransform: "uppercase", fontFamily: "'Outfit',sans-serif", marginBottom: 4 }}>Feature 01 — Priority Engine</div>
                             <Heading><GradText>Intelligently ranked</GradText> before you open it.</Heading>
                         </div>
                     </div>
@@ -722,7 +714,7 @@ export default function FeaturesPage() {
                     <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 52 }}>
                         <div style={{ width: 3, height: 52, borderRadius: 99, background: "linear-gradient(180deg,#c084fc,#a855f7)" }} />
                         <div>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: "#c084fc", letterSpacing: 1.2, textTransform: "uppercase" as const, fontFamily: "'Outfit',sans-serif", marginBottom: 4 }}>Feature 02 — Reply & Tasks</div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: "#c084fc", letterSpacing: 1.2, textTransform: "uppercase", fontFamily: "'Outfit',sans-serif", marginBottom: 4 }}>Feature 02 — Reply & Tasks</div>
                             <h2 style={{ fontSize: "clamp(30px,3vw,50px)", fontWeight: 900, letterSpacing: "-1.8px", lineHeight: 1.08, fontFamily: "'Outfit',sans-serif", color: "rgba(255,255,255,.95)", marginBottom: 0 }}>
                                 Reply in seconds. <span style={{ background: "linear-gradient(135deg,#c084fc,#a855f7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Act without thinking.</span>
                             </h2>
@@ -760,7 +752,7 @@ export default function FeaturesPage() {
                     <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 52 }}>
                         <div style={{ width: 3, height: 52, borderRadius: 99, background: "linear-gradient(180deg,#9333ea,#7c3aed)" }} />
                         <div>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: "#9333ea", letterSpacing: 1.2, textTransform: "uppercase" as const, fontFamily: "'Outfit',sans-serif", marginBottom: 4 }}>Feature 03 — Focus Mode</div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: "#9333ea", letterSpacing: 1.2, textTransform: "uppercase", fontFamily: "'Outfit',sans-serif", marginBottom: 4 }}>Feature 03 — Focus Mode</div>
                             <Heading>One screen. <GradText>Zero distractions.</GradText></Heading>
                         </div>
                     </div>
@@ -800,7 +792,7 @@ export default function FeaturesPage() {
                     <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 52 }}>
                         <div style={{ width: 3, height: 52, borderRadius: 99, background: "linear-gradient(180deg,#a855f7,#c084fc)" }} />
                         <div>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: "#a855f7", letterSpacing: 1.2, textTransform: "uppercase" as const, fontFamily: "'Outfit',sans-serif", marginBottom: 4 }}>Feature 04 — Wellbeing</div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: "#a855f7", letterSpacing: 1.2, textTransform: "uppercase", fontFamily: "'Outfit',sans-serif", marginBottom: 4 }}>Feature 04 — Wellbeing</div>
                             <h2 style={{ fontSize: "clamp(30px,3vw,50px)", fontWeight: 900, letterSpacing: "-1.8px", lineHeight: 1.08, fontFamily: "'Outfit',sans-serif", color: "rgba(255,255,255,.95)", marginBottom: 0 }}>
                                 Your inbox shouldn't{" "}
                                 <span style={{ background: "linear-gradient(135deg,#a855f7,#c084fc)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>burn you out.</span>
@@ -838,7 +830,7 @@ export default function FeaturesPage() {
                     <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 52 }}>
                         <div style={{ width: 3, height: 52, borderRadius: 99, background: "linear-gradient(180deg,#4c1d95,#7c3aed)" }} />
                         <div>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: "#4c1d95", letterSpacing: 1.2, textTransform: "uppercase" as const, fontFamily: "'Outfit',sans-serif", marginBottom: 4 }}>Feature 05 — Agentic AI</div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: "#4c1d95", letterSpacing: 1.2, textTransform: "uppercase", fontFamily: "'Outfit',sans-serif", marginBottom: 4 }}>Feature 05 — Agentic AI</div>
                             <Heading><span style={{ background: "linear-gradient(135deg,#4c1d95,#7c3aed)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Handle For Me.</span> The future of email.</Heading>
                         </div>
                     </div>
@@ -872,7 +864,7 @@ export default function FeaturesPage() {
                     <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 52 }}>
                         <div style={{ width: 3, height: 52, borderRadius: 99, background: "linear-gradient(180deg,#c084fc,#7c3aed)" }} />
                         <div>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: "#c084fc", letterSpacing: 1.2, textTransform: "uppercase" as const, fontFamily: "'Outfit',sans-serif", marginBottom: 4 }}>Feature 06 — Intelligence Layer</div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: "#c084fc", letterSpacing: 1.2, textTransform: "uppercase", fontFamily: "'Outfit',sans-serif", marginBottom: 4 }}>Feature 06 — Intelligence Layer</div>
                             <h2 style={{ fontSize: "clamp(30px,3vw,50px)", fontWeight: 900, letterSpacing: "-1.8px", lineHeight: 1.08, fontFamily: "'Outfit',sans-serif", color: "rgba(255,255,255,.95)", marginBottom: 0 }}>
                                 Every smart feature,{" "}
                                 <span style={{ background: "linear-gradient(135deg,#c084fc,#a855f7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>under one roof.</span>
@@ -906,7 +898,7 @@ export default function FeaturesPage() {
             <section style={{ position: "relative", overflow: "hidden", background: "#ffffff", paddingTop: 24 }}>
                 <DiagonalCanvas />
                 <div style={{ position: "relative", zIndex: 2, ...W_MAX, paddingTop: 72, paddingBottom: 96 }}>
-                    <div style={{ textAlign: "center" as const, marginBottom: 60 }}>
+                    <div style={{ textAlign: "center", marginBottom: 60 }}>
                         <Chip label="Why Scasi" />
                         <Heading>The only email client <GradText>built for AI-first work.</GradText></Heading>
                         <p style={{ fontSize: 16, color: "#6b7280", lineHeight: 1.8, maxWidth: 500, margin: "0 auto", fontFamily: "'Outfit',sans-serif" }}>
@@ -924,7 +916,7 @@ export default function FeaturesPage() {
             <section style={{ position: "relative", overflow: "hidden", background: "#0e0b22", paddingTop: 16 }}>
                 <NodeCanvas />
                 <div style={{ position: "relative", zIndex: 2, ...W_MAX, paddingTop: 64, paddingBottom: 88 }}>
-                    <div style={{ textAlign: "center" as const, marginBottom: 52 }}>
+                    <div style={{ textAlign: "center", marginBottom: 52 }}>
                         <Chip label="Built to Last" dark />
                         <h2 style={{ fontSize: "clamp(28px,2.8vw,46px)", fontWeight: 900, letterSpacing: "-1.8px", lineHeight: 1.1, fontFamily: "'Outfit',sans-serif", color: "rgba(255,255,255,.95)", marginBottom: 14 }}>
                             Enterprise-grade.{" "}

@@ -193,9 +193,6 @@ const Footer = () => {
 const FooterColumn = ({
     title,
     links,
-}: {
-    title: string;
-    links: { label: string; href: string }[];
 }) => {
     return (
         <div>

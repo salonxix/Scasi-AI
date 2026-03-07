@@ -1,13 +1,13 @@
-import NextAuth, { type NextAuthOptions } from "next-auth";
+import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import AzureADProvider from "next-auth/providers/azure-ad";
 
-export const authOptions: NextAuthOptions = {
+export const authOptions = {
   providers: [
     // ✅ Google Login (Gmail Access)
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
 
       authorization: {
         params: {
@@ -25,9 +25,9 @@ export const authOptions: NextAuthOptions = {
 
     // ✅ Outlook Login (Azure AD)
     AzureADProvider({
-      clientId: process.env.AZURE_AD_CLIENT_ID!,
-      clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
-      tenantId: process.env.AZURE_AD_TENANT_ID!,
+      clientId: process.env.AZURE_AD_CLIENT_ID,
+      clientSecret: process.env.AZURE_AD_CLIENT_SECRET,
+      tenantId: process.env.AZURE_AD_TENANT_ID,
     }),
   ],
 
@@ -56,9 +56,9 @@ export const authOptions: NextAuthOptions = {
 
     // ✅ Send token to frontend session
     async session({ session, token }) {
-      (session as any).accessToken = token.accessToken;
-      (session as any).refreshToken = token.refreshToken;
-      (session as any).provider = token.provider;
+      session.accessToken = token.accessToken;
+      session.refreshToken = token.refreshToken;
+      session.provider = token.provider;
 
       return session;
     },

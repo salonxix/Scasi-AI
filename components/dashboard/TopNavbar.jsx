@@ -2,31 +2,6 @@
 
 import { signOut } from "next-auth/react";
 
-interface TopNavbarProps {
-    searchQuery: string;
-    setSearchQuery: (value: string) => void;
-
-    newMailCount: number;
-    newMails: any[];
-
-    showNotifications: boolean;
-    setShowNotifications: (value: boolean) => void;
-
-    openMailAndGenerateAI: (id: string, mail: any) => void;
-
-    setNewMailCount: (value: number) => void;
-    setNewMails: (value: any[]) => void;
-
-    session: any;
-
-    sidebarOpen: boolean;
-    setSidebarOpen: (value: boolean) => void;
-
-    refreshInbox: () => void;
-    setAppView: (view: string) => void;
-    setShowCompose: (value: boolean) => void;
-}
-
 export default function TopNavbar({
     searchQuery,
     setSearchQuery,
@@ -43,7 +18,7 @@ export default function TopNavbar({
     refreshInbox,
     setAppView,
     setShowCompose,
-}: TopNavbarProps) {
+}) {
     return (
         <div className="topbar">
 

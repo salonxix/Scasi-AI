@@ -2,11 +2,7 @@
 
 import { useEffect } from "react";
 
-interface MailMindDashboardProps {
-    onNavigate: (view: string) => void;
-}
-
-function MailMindDashboard({ onNavigate }: { onNavigate: (folder: string) => void }) {
+function MailMindDashboard({ onNavigate }) {
 
     useEffect(() => {
         // ── Google Fonts (DM Serif / DM Sans / JetBrains Mono) ──
@@ -18,14 +14,14 @@ function MailMindDashboard({ onNavigate }: { onNavigate: (folder: string) => voi
 
         // ── Bar / ring animations ──
         setTimeout(() => {
-            document.querySelectorAll<HTMLElement>(".mm-brf").forEach((el) => {
+            document.querySelectorAll(".mm-brf").forEach((el) => {
                 const w = el.style.width;
                 el.style.width = "0%";
                 requestAnimationFrame(() => {
                     el.style.width = w;
                 });
             });
-            const ring = document.getElementById("mm-ring") as SVGCircleElement | null;
+            const ring = document.getElementById("mm-ring");
             if (ring) {
                 const full = 2 * Math.PI * 24;
                 ring.style.strokeDashoffset = String(full);
@@ -38,10 +34,10 @@ function MailMindDashboard({ onNavigate }: { onNavigate: (folder: string) => voi
         }, 120);
 
         // ── Sidebar nav active state ──
-        document.querySelectorAll<HTMLElement>(".mm-ni").forEach((n) =>
+        document.querySelectorAll(".mm-ni").forEach((n) =>
             n.addEventListener("click", () => {
                 document
-                    .querySelectorAll<HTMLElement>(".mm-ni")
+                    .querySelectorAll(".mm-ni")
                     .forEach((x) => x.classList.remove("mm-active"));
                 n.classList.add("mm-active");
             })
@@ -69,7 +65,7 @@ function MailMindDashboard({ onNavigate }: { onNavigate: (folder: string) => voi
 
         let po = false, pi = 0, pf = [...ITEMS];
 
-        function renderPal(items: typeof ITEMS) {
+        function renderPal(items) {
             const c = document.getElementById("mm-palRes");
             if (!c) return;
             if (!items.length) {
@@ -88,7 +84,7 @@ function MailMindDashboard({ onNavigate }: { onNavigate: (folder: string) => voi
         }
 
         const palEl = document.getElementById("mm-pal");
-        const palIn = document.getElementById("mm-palIn") as HTMLInputElement | null;
+        const palIn = document.getElementById("mm-palIn");
 
         function openPal() {
             palEl?.classList.add("mm-open");
@@ -96,8 +92,8 @@ function MailMindDashboard({ onNavigate }: { onNavigate: (folder: string) => voi
             po = true;
             renderPal(ITEMS);
         }
-        function closePal(e: Event) {
-            if ((e as MouseEvent).target !== palEl) return;
+        function closePal(e) {
+            if (e.target !== palEl) return;
             palEl?.classList.remove("mm-open");
             po = false;
             if (palIn) palIn.value = "";
@@ -119,7 +115,7 @@ function MailMindDashboard({ onNavigate }: { onNavigate: (folder: string) => voi
             renderPal(pf);
         });
 
-        const kd = (e: KeyboardEvent) => {
+        const kd = (e) => {
             if ((e.metaKey || e.ctrlKey) && e.key === "k") {
                 e.preventDefault();
                 openPal();
@@ -155,8 +151,8 @@ function MailMindDashboard({ onNavigate }: { onNavigate: (folder: string) => voi
         nbtn?.addEventListener("click", toggleN);
         document.getElementById("mm-clearN")?.addEventListener("click", clearN);
 
-        const docClick = (e: Event) => {
-            const t = e.target as HTMLElement;
+        const docClick = (e) => {
+            const t = e.target;
             if (!t.closest("#mm-np") && !t.closest("#mm-nbtn"))
                 np?.classList.remove("mm-open");
         };

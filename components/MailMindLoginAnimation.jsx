@@ -3,11 +3,7 @@
 import { motion } from "framer-motion";
 import { useEffect } from "react";
 
-type Props = {
-    onComplete?: () => void;
-};
-
-export function MailMindLoginAnimation({ onComplete }: Props) {
+export function MailMindLoginAnimation({ onComplete }) {
     useEffect(() => {
         const timer = setTimeout(() => {
             if (onComplete) onComplete();

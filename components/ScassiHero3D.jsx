@@ -29,18 +29,18 @@ const BODY = "'Outfit',sans-serif";
    ELEGANT CURSOR
 ════════════════════════════════════════════════════════════ */
 function ElegantCursor() {
-    const ringRef = useRef<HTMLDivElement>(null);
-    const dotRef = useRef<HTMLDivElement>(null);
+    const ringRef = useRef(null);
+    const dotRef = useRef(null);
     const pos = useRef({ x: -300, y: -300 });
     const lag = useRef({ x: -300, y: -300 });
 
     useEffect(() => {
-        const onMove = (e: MouseEvent) => {
+const onMove = (e) => {
             pos.current = { x: e.clientX, y: e.clientY };
             if (dotRef.current)
                 dotRef.current.style.transform = `translate(${e.clientX - 3}px,${e.clientY - 3}px)`;
         };
-        let raf: number;
+        let raf;
         const loop = () => {
             raf = requestAnimationFrame(loop);
             lag.current.x += (pos.current.x - lag.current.x) * 0.09;
@@ -74,8 +74,8 @@ function ElegantCursor() {
 /* ════════════════════════════════════════════════════════════
    NEBULA BG
 ════════════════════════════════════════════════════════════ */
-function NebulaBG({ style }: { style?: React.CSSProperties }) {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
+function NebulaBG({ style }) {
+    const canvasRef = useRef(null);
     const mouseRef = useRef({ x: 0, y: 0 });
 
     useEffect(() => {
@@ -88,7 +88,7 @@ function NebulaBG({ style }: { style?: React.CSSProperties }) {
         canvas.width = W;
         canvas.height = H;
 
-        const onMouse = (e: MouseEvent) => { mouseRef.current = { x: e.clientX, y: e.clientY }; };
+        const onMouse = (e) => { mouseRef.current = { x: e.clientX, y: e.clientY }; };
         window.addEventListener("mousemove", onMouse);
 
         const PURPLE_SHADES = [
@@ -97,8 +97,7 @@ function NebulaBG({ style }: { style?: React.CSSProperties }) {
             "rgba(109,40,217,", "rgba(139,92,246,", "rgba(167,139,250,",
         ];
 
-        type Line = { x1: number; y1: number; x2: number; y2: number; progress: number; speed: number; color: string; width: number; opacity: number; dash: number };
-        const lines: Line[] = Array.from({ length: 28 }, () => ({
+        const lines = Array.from({ length: 28 }, () => ({
             x1: Math.random() * W, y1: Math.random() * H,
             x2: Math.random() * W, y2: Math.random() * H,
             progress: Math.random(),
@@ -109,8 +108,7 @@ function NebulaBG({ style }: { style?: React.CSSProperties }) {
             dash: Math.random() > 0.5 ? Math.floor(Math.random() * 8 + 2) : 0,
         }));
 
-        type Orb = { x: number; y: number; r: number; vx: number; vy: number; hue: number; opacity: number; phase: number };
-        const orbs: Orb[] = Array.from({ length: 7 }, () => ({
+        const orbs = Array.from({ length: 7 }, () => ({
             x: Math.random() * W, y: Math.random() * H * 0.8,
             r: 120 + Math.random() * 200,
             vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.2,
@@ -119,8 +117,7 @@ function NebulaBG({ style }: { style?: React.CSSProperties }) {
             phase: Math.random() * Math.PI * 2,
         }));
 
-        type Particle = { x: number; y: number; r: number; opacity: number; phase: number; speed: number; hue: number };
-        const particles: Particle[] = Array.from({ length: 600 }, () => ({
+        const particles = Array.from({ length: 600 }, () => ({
             x: Math.random() * W, y: Math.random() * H,
             r: Math.random() * 0.8 + 0.1,
             opacity: Math.random() * 0.5 + 0.1,
@@ -129,14 +126,13 @@ function NebulaBG({ style }: { style?: React.CSSProperties }) {
             hue: 250 + Math.random() * 80,
         }));
 
-        type Ripple = { x: number; y: number; r: number; maxR: number; opacity: number };
-        const ripples: Ripple[] = [];
-        const onClick = (e: MouseEvent) => {
+        const ripples = [];
+        const onClick = (e) => {
             ripples.push({ x: e.clientX, y: e.clientY, r: 0, maxR: 80, opacity: 0.6 });
         };
         window.addEventListener("click", onClick);
 
-        let t = 0; let raf: number;
+        let t = 0; let raf;
         const draw = () => {
             raf = requestAnimationFrame(draw); t += 0.012;
             ctx.clearRect(0, 0, W, H);
@@ -251,18 +247,16 @@ function NebulaBG({ style }: { style?: React.CSSProperties }) {
    NERVE CANVAS
 ════════════════════════════════════════════════════════════ */
 function NerveCanvas() {
-    const ref = useRef<HTMLCanvasElement>(null);
+    const ref = useRef(null);
     useEffect(() => {
         const c = ref.current; if (!c) return;
-        const ctx = c.getContext("2d")!;
+        const ctx = c.getContext("2d");
         let W = (c.width = c.offsetWidth), H = (c.height = c.offsetHeight);
-        type Pt = { x: number; y: number; vx: number; vy: number };
-        type NP = { pts: Pt[]; hue: number; opa: number; w: number; ph: number };
-        const paths: NP[] = Array.from({ length: 12 }, () => ({
+        const paths = Array.from({ length: 12 }, () => ({
             pts: Array.from({ length: 4 }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * .2, vy: (Math.random() - .5) * .16 })),
             hue: 255 + Math.random() * 50, opa: .04 + Math.random() * .07, w: .7 + Math.random() * 1.3, ph: Math.random() * Math.PI * 2,
         }));
-        let t = 0, raf: number;
+        let t = 0, raf;
         const draw = () => {
             raf = requestAnimationFrame(draw); t += .006;
             ctx.clearRect(0, 0, W, H);
@@ -306,14 +300,13 @@ function NerveCanvas() {
    NODE CANVAS
 ════════════════════════════════════════════════════════════ */
 function NodeCanvas() {
-    const ref = useRef<HTMLCanvasElement>(null);
+    const ref = useRef(null);
     useEffect(() => {
         const c = ref.current; if (!c) return;
-        const ctx = c.getContext("2d")!;
+        const ctx = c.getContext("2d");
         let W = (c.width = c.offsetWidth), H = (c.height = c.offsetHeight);
-        type N = { x: number; y: number; vx: number; vy: number; ph: number };
-        const nodes: N[] = Array.from({ length: 55 }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * .38, vy: (Math.random() - .5) * .28, ph: Math.random() * Math.PI * 2 }));
-        let t = 0, raf: number;
+        const nodes = Array.from({ length: 55 }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * .38, vy: (Math.random() - .5) * .28, ph: Math.random() * Math.PI * 2 }));
+        let t = 0, raf;
         const draw = () => {
             raf = requestAnimationFrame(draw); t += .007;
             ctx.clearRect(0, 0, W, H);
@@ -345,7 +338,7 @@ function NodeCanvas() {
 /* ════════════════════════════════════════════════════════════
    WAVE DIVIDERS
 ════════════════════════════════════════════════════════════ */
-function WaveDown({ fromColor = "#ffffff", toColor = "#0f0b24" }: { fromColor?: string; toColor?: string }) {
+function WaveDown({ fromColor = "#ffffff", toColor = "#0f0b24" }) {
     return (
         <div style={{ background: fromColor, lineHeight: 0, display: "block" }}>
             <svg viewBox="0 0 1440 70" preserveAspectRatio="none" style={{ display: "block", width: "100%", height: 70 }}>
@@ -354,7 +347,7 @@ function WaveDown({ fromColor = "#ffffff", toColor = "#0f0b24" }: { fromColor?: 
         </div>
     );
 }
-function WaveUp({ fromColor = "#0f0b24", toColor = "#ffffff" }: { fromColor?: string; toColor?: string }) {
+function WaveUp({ fromColor = "#0f0b24", toColor = "#ffffff" }) {
     return (
         <div style={{ background: fromColor, lineHeight: 0, display: "block" }}>
             <svg viewBox="0 0 1440 70" preserveAspectRatio="none" style={{ display: "block", width: "100%", height: 70 }}>
@@ -367,7 +360,7 @@ function WaveUp({ fromColor = "#0f0b24", toColor = "#ffffff" }: { fromColor?: st
 /* ════════════════════════════════════════════════════════════
    DESIGN ATOMS
 ════════════════════════════════════════════════════════════ */
-function GradText({ children }: { children: React.ReactNode }) {
+function GradText({ children }) {
     return (
         <span style={{ background: "linear-gradient(135deg,#7c3aed 0%,#a855f7 45%,#c084fc 85%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
             {children}
@@ -375,7 +368,7 @@ function GradText({ children }: { children: React.ReactNode }) {
     );
 }
 
-function Pill({ icon, text, color }: { icon: React.ReactNode; text: string; color: string }) {
+function Pill({ icon, text, color }) {
     return (
         <div style={{
             display: "inline-flex", alignItems: "center", gap: 7,
@@ -383,12 +376,12 @@ function Pill({ icon, text, color }: { icon: React.ReactNode; text: string; colo
             borderRadius: 30, padding: "5px 15px", marginBottom: 16,
         }}>
             <span style={{ display: "flex", alignItems: "center", opacity: 0.9 }}>{icon}</span>
-            <span style={{ fontFamily: BODY, fontSize: 9, fontWeight: 800, color, letterSpacing: 2, textTransform: "uppercase" as const }}>{text}</span>
+            <span style={{ fontFamily: BODY, fontSize: 9, fontWeight: 800, color, letterSpacing: 2, textTransform: "uppercase" }}>{text}</span>
         </div>
     );
 }
 
-function Chip({ label, dark }: { label: string; dark?: boolean }) {
+function Chip({ label, dark }) {
     return (
         <div style={{
             display: "inline-flex", alignItems: "center", gap: 7, borderRadius: 100, padding: "5px 15px", marginBottom: 20,
@@ -397,7 +390,7 @@ function Chip({ label, dark }: { label: string; dark?: boolean }) {
         }}>
             <motion.div animate={{ scale: [1, 1.55, 1] }} transition={{ duration: 2.2, repeat: Infinity }}
                 style={{ width: 6, height: 6, borderRadius: "50%", background: dark ? "#c084fc" : "#7c3aed" }} />
-            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" as const, fontFamily: BODY, color: dark ? "#c084fc" : "#7c3aed" }}>{label}</span>
+            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", fontFamily: BODY, color: dark ? "#c084fc" : "#7c3aed" }}>{label}</span>
         </div>
     );
 }
@@ -405,11 +398,8 @@ function Chip({ label, dark }: { label: string; dark?: boolean }) {
 /* ════════════════════════════════════════════════════════════
    INBOX TYPES & DATA
 ════════════════════════════════════════════════════════════ */
-type Tag = "TO RESPOND" | "MEETINGS" | "FYI";
-interface Draft { body: string }
-interface EmailItem { id: number; from: string; initials: string; subject: string; preview: string; tag: Tag; avatarColor: string; draft?: Draft }
 
-const inboxEmails: EmailItem[] = [
+const inboxEmails = [
     {
         id: 1, from: "Priya Sharma", initials: "PS", subject: "Re: Product launch timeline",
         preview: "Following up on the Q1 launch — are we able to confirm the go-live date this week?",
@@ -428,7 +418,7 @@ const inboxEmails: EmailItem[] = [
     },
 ];
 
-const tagConfig: Record<Tag, { bg: string; text: string; icon: React.ReactNode }> = {
+const tagConfig = {
     "TO RESPOND": { bg: "bg-rose-400/20 text-rose-500 border border-rose-300/40", text: "TO RESPOND", icon: <Reply size={10} /> },
     "MEETINGS": { bg: "bg-violet-400/20 text-violet-600 border border-violet-300/40", text: "MEETINGS", icon: <Calendar size={10} /> },
     "FYI": { bg: "bg-amber-400/20 text-amber-600 border border-amber-300/40", text: "FYI", icon: <Info size={10} /> },
@@ -443,14 +433,14 @@ const navItems = [
 /* ════════════════════════════════════════════════════════════
    INBOX SUB-COMPONENTS
 ════════════════════════════════════════════════════════════ */
-function InboxAvatar({ initials, color }: { initials: string; color: string }) {
+function InboxAvatar({ initials, color }) {
     return (
         <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0 shadow-sm"
             style={{ backgroundColor: color }}>{initials}</div>
     );
 }
 
-function TagBadge({ tag }: { tag: Tag }) {
+function TagBadge({ tag }) {
     const cfg = tagConfig[tag];
     return (
         <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase ${cfg.bg}`}>
@@ -459,7 +449,7 @@ function TagBadge({ tag }: { tag: Tag }) {
     );
 }
 
-function DraftBox({ body, onSend }: { body: string; onSend: () => void }) {
+function DraftBox({ body, onSend }) {
     const [text, setText] = useState(body);
     const [sent, setSent] = useState(false);
     const handleSend = () => { setSent(true); setTimeout(onSend, 600); };
@@ -487,7 +477,7 @@ function DraftBox({ body, onSend }: { body: string; onSend: () => void }) {
     );
 }
 
-function EmailCard({ email }: { email: EmailItem }) {
+function EmailCard({ email }) {
     const [expanded, setExpanded] = useState(email.draft !== undefined);
     const [dismissed, setDismissed] = useState(false);
     const [draftVisible, setDraftVisible] = useState(email.draft !== undefined);
@@ -711,7 +701,7 @@ const INBOX_PANEL_CSS = `
 /* ════════════════════════════════════════════════════════════
    INBOX SECTION CARD
 ════════════════════════════════════════════════════════════ */
-function InboxSectionCard({ inView }: { inView: boolean }) {
+function InboxSectionCard({ inView }) {
     return (
         <motion.div
             initial={{ opacity: 0, y: 36 }}
@@ -761,15 +751,13 @@ function InboxSectionCard({ inView }: { inView: boolean }) {
 /* ════════════════════════════════════════════════════════════
    LIVE BURNOUT CHART
 ════════════════════════════════════════════════════════════ */
-type WorkloadT = "Low" | "Medium" | "High";
-type TrendT = "Falling" | "Stable" | "Rising";
 
-function LiveBurnoutChart({ stress, workload, trend }: { stress: number; workload: WorkloadT; trend: TrendT }) {
+function LiveBurnoutChart({ stress, workload, trend }) {
     const W = 320, H = 100, N = 14;
     const [mounted, setMounted] = useState(false);
     useEffect(() => { setMounted(true); }, []);
 
-    const gen = useCallback((s: number, w: string, tr: string) => {
+    const gen = useCallback((s, w, tr) => {
         const base = s * 1.2, wm = w === "High" ? 1.3 : w === "Medium" ? 1 : 0.7;
         return Array.from({ length: N }, (_, i) => {
             const ta = tr === "Rising" ? (i / N) * 45 : tr === "Falling" ? ((N - i) / N) * 35 : 0;
@@ -777,7 +765,7 @@ function LiveBurnoutChart({ stress, workload, trend }: { stress: number; workloa
         });
     }, []);
 
-    const stableInit = useCallback((s: number, w: string, tr: string) => {
+    const stableInit = useCallback((s, w, tr) => {
         const base = s * 1.2, wm = w === "High" ? 1.3 : w === "Medium" ? 1 : 0.7;
         return Array.from({ length: N }, (_, i) => {
             const ta = tr === "Rising" ? (i / N) * 45 : tr === "Falling" ? ((N - i) / N) * 35 : 0;
@@ -794,8 +782,8 @@ function LiveBurnoutChart({ stress, workload, trend }: { stress: number; workloa
     }, [stress, workload, trend, gen, mounted]);
 
     const mx = Math.max(...pts), mn = Math.min(...pts);
-    const tx = (i: number) => (i / (N - 1)) * W;
-    const ty = (v: number) => H - ((v - mn) / Math.max(mx - mn, 1)) * (H - 14) - 7;
+    const tx = (i) => (i / (N - 1)) * W;
+    const ty = (v) => H - ((v - mn) / Math.max(mx - mn, 1)) * (H - 14) - 7;
     const pD = pts.map((v, i) => `${i === 0 ? "M" : "L"}${tx(i).toFixed(1)},${ty(v).toFixed(1)}`).join(" ");
     const aD = `${pD} L${W},${H} L0,${H} Z`;
     const lc = stress > 70 ? "#ef4444" : stress > 40 ? "#f97316" : "#22c55e";
@@ -845,7 +833,7 @@ function LiveBurnoutChart({ stress, workload, trend }: { stress: number; workloa
 /* ════════════════════════════════════════════════════════════
    SCORE BAR
 ════════════════════════════════════════════════════════════ */
-function ScoreBar({ label, score, color, delay, go }: { label: string; score: number; color: string; delay: number; go: boolean }) {
+function ScoreBar({ label, score, color, delay, go }) {
     return (
         <div style={{ marginBottom: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
@@ -863,7 +851,7 @@ function ScoreBar({ label, score, color, delay, go }: { label: string; score: nu
 /* ════════════════════════════════════════════════════════════
    TASK ROW
 ════════════════════════════════════════════════════════════ */
-function TaskRow({ text, done, delay, go, tag }: { text: string; done: boolean; delay: number; go: boolean; tag?: string }) {
+function TaskRow({ text, done, delay, go, tag }) {
     return (
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: go ? 1 : 0, x: go ? 0 : -20 }} transition={{ delay, duration: .55, ease: [.23, 1, .32, 1] }}
             style={{
@@ -886,7 +874,7 @@ function TaskRow({ text, done, delay, go, tag }: { text: string; done: boolean; 
             }}>{text}</span>
             {tag && <span style={{
                 fontSize: 8, background: done ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)",
-                color: done ? "#22c55e" : "#f87171", padding: "2px 8px", borderRadius: 6, fontFamily: BODY, fontWeight: 700, whiteSpace: "nowrap" as const
+                color: done ? "#22c55e" : "#f87171", padding: "2px 8px", borderRadius: 6, fontFamily: BODY, fontWeight: 700, whiteSpace: "nowrap"
             }}>{tag}</span>}
         </motion.div>
     );
@@ -975,7 +963,7 @@ function OverloadPhone() {
                         </motion.div>
                     ))}
                     <div style={{
-                        textAlign: "center" as const, fontSize: 9, color: "#ef4444", fontWeight: 800, fontFamily: BODY,
+                        textAlign: "center", fontSize: 9, color: "#ef4444", fontWeight: 800, fontFamily: BODY,
                         marginTop: 4, background: "rgba(239,68,68,.1)", borderRadius: 6, padding: "2px 0"
                     }}>+47 unread items</div>
                 </div>
@@ -1036,7 +1024,7 @@ function ClipboardOrb() {
 /* ════════════════════════════════════════════════════════════
    GEMINI CHAT
 ════════════════════════════════════════════════════════════ */
-function GeminiChat({ inView }: { inView: boolean }) {
+function GeminiChat({ inView }) {
     const [qi, setQi] = useState(0);
     const [txt, setTxt] = useState("");
     const [typing, setTyping] = useState(false);
@@ -1106,7 +1094,7 @@ function GeminiChat({ inView }: { inView: boolean }) {
                 </div>
             </div>
             {/* Query buttons */}
-            <div style={{ display: "flex", gap: 7, flexWrap: "wrap" as const, marginBottom: 18 }}>
+            <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 18 }}>
                 {qas.map((q, i) => (
                     <motion.button key={i} onClick={() => setQi(i)} whileHover={{ scale: 1.05, y: -1 }} whileTap={{ scale: .96 }}
                         style={{
@@ -1159,18 +1147,18 @@ function GeminiChat({ inView }: { inView: boolean }) {
 /* ════════════════════════════════════════════════════════════
    STAT CARD
 ════════════════════════════════════════════════════════════ */
-function useCountUp(end: number, dur = 1500, go = false) {
+function useCountUp(end, dur = 1500, go = false) {
     const [v, setV] = useState(0);
     useEffect(() => {
         if (!go) return;
         let st = 0;
-        const f = (t: number) => { if (!st) st = t; const p = Math.min((t - st) / dur, 1); setV(Math.floor((1 - Math.pow(1 - p, 3)) * end)); if (p < 1) requestAnimationFrame(f); };
+        const f = (t) => { if (!st) st = t; const p = Math.min((t - st) / dur, 1); setV(Math.floor((1 - Math.pow(1 - p, 3)) * end)); if (p < 1) requestAnimationFrame(f); };
         requestAnimationFrame(f);
     }, [go, end, dur]);
     return v;
 }
 
-function StatCard({ icon, num, label, color, sub, delay, go }: { icon: React.ReactNode; num: number; label: string; color: string; sub: string; delay: number; go: boolean }) {
+function StatCard({ icon, num, label, color, sub, delay, go }) {
     const v = useCountUp(num, 1500, go);
     return (
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: go ? 1 : 0, y: go ? 0 : 30 }} transition={{ delay, duration: .65, ease: [.23, 1, .32, 1] }}
@@ -1178,7 +1166,7 @@ function StatCard({ icon, num, label, color, sub, delay, go }: { icon: React.Rea
             style={{
                 background: "linear-gradient(145deg,#0e0b28,#0b0920)", border: "1px solid rgba(124,58,237,.2)",
                 borderRadius: 22, padding: "28px 22px", display: "flex", flexDirection: "column", alignItems: "center",
-                textAlign: "center" as const, boxShadow: "0 14px 44px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06)",
+                textAlign: "center", boxShadow: "0 14px 44px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06)",
                 position: "relative", overflow: "hidden", cursor: "default"
             }}>
             <div style={{ position: "absolute", top: -24, right: -24, width: 90, height: 90, background: `radial-gradient(ellipse,${color}30 0%,transparent 70%)` }} />
@@ -1195,7 +1183,7 @@ function StatCard({ icon, num, label, color, sub, delay, go }: { icon: React.Rea
 /* ════════════════════════════════════════════════════════════
    DEADLINE CARD
 ════════════════════════════════════════════════════════════ */
-function DeadlineCard({ label, deadline, urgency, color, email, delay, go }: { label: string; deadline: string; urgency: string; color: string; email: string; delay: number; go: boolean }) {
+function DeadlineCard({ label, deadline, urgency, color, email, delay, go }) {
     return (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: go ? 1 : 0, y: go ? 0 : 20 }} transition={{ delay, duration: .6 }} whileHover={{ y: -5 }}
             style={{ background: `linear-gradient(145deg,${color}0a,rgba(9,7,26,.8))`, border: `1px solid ${color}35`, borderRadius: 18, padding: "18px 16px", position: "relative", overflow: "hidden" }}>
@@ -1214,7 +1202,7 @@ function DeadlineCard({ label, deadline, urgency, color, email, delay, go }: { l
 /* ════════════════════════════════════════════════════════════
    COMPARE TABLE
 ════════════════════════════════════════════════════════════ */
-function CompareTable({ go }: { go: boolean }) {
+function CompareTable({ go }) {
     const rows = [
         { f: "Email Sorting", g: "Manual", m: "AI Categorisation", c: "#7c3aed" },
         { f: "Urgency Detection", g: "None", m: "Priority Score 0–100", c: "#ef4444" },
@@ -1232,7 +1220,7 @@ function CompareTable({ go }: { go: boolean }) {
                 display: "grid", gridTemplateColumns: "1fr 140px 200px", background: "rgba(255,255,255,.02)",
                 borderBottom: "1px solid rgba(255,255,255,.06)", padding: "18px 28px"
             }}>
-                <span style={{ fontFamily: BODY, fontSize: 9, color: "#334155", fontWeight: 800, letterSpacing: 2, textTransform: "uppercase" as const }}>Feature</span>
+                <span style={{ fontFamily: BODY, fontSize: 9, color: "#334155", fontWeight: 800, letterSpacing: 2, textTransform: "uppercase" }}>Feature</span>
                 <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
                     <div style={{ width: 24, height: 24, borderRadius: 7, background: "rgba(255,255,255,.05)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <Mail size={13} color="#94a3b8" />
@@ -1273,8 +1261,8 @@ function CompareTable({ go }: { go: boolean }) {
 /* ════════════════════════════════════════════════════════════
    STACK CARD
 ════════════════════════════════════════════════════════════ */
-function StackCard({ children, idx }: { children: React.ReactNode; idx: number }) {
-    const ref = useRef<HTMLDivElement>(null);
+function StackCard({ children, idx }) {
+    const ref = useRef(null);
     const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
     const y = useTransform(scrollYProgress, [0, 1], [55, -30]);
     const sc = useTransform(scrollYProgress, [0, .4, .6, 1], [.96, 1, 1, .97]);
@@ -1372,7 +1360,7 @@ function LaptopMockup() {
     return (
         <motion.div initial={{ opacity: 0, y: 40, rotateX: 8 }} animate={{ opacity: 1, y: 0, rotateX: 3 }}
             transition={{ duration: 1.2, delay: .3, ease: [.23, 1, .32, 1] }}
-            style={{ width: 520, perspective: "1200px", filter: "drop-shadow(0 40px 80px rgba(109,40,217,.5))", transformStyle: "preserve-3d" as const }}>
+            style={{ width: 520, perspective: "1200px", filter: "drop-shadow(0 40px 80px rgba(109,40,217,.5))", transformStyle: "preserve-3d" }}>
             <div style={{
                 background: "linear-gradient(160deg,#1a1040 0%,#0e0826 100%)", borderRadius: "16px 16px 0 0",
                 border: "1.5px solid rgba(124,58,237,.35)", borderBottom: "none", padding: "12px 12px 0"
@@ -1416,7 +1404,7 @@ function LaptopMockup() {
                     </div>
                     {/* Email list panel */}
                     <div style={{ width: 160, borderRight: "1px solid rgba(255,255,255,.05)", padding: "8px 0" }}>
-                        <div style={{ padding: "6px 10px", fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase" as const, fontFamily: BODY }}>Inbox · 14</div>
+                        <div style={{ padding: "6px 10px", fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", fontFamily: BODY }}>Inbox · 14</div>
                         {emailList.map((m, i) => (
                             <div key={i} style={{
                                 padding: "8px 10px", background: i === 0 ? "rgba(124,58,237,.15)" : "transparent",
@@ -1426,7 +1414,7 @@ function LaptopMockup() {
                                     <span style={{ color: m.read ? "#475569" : "#e2e8f0", fontSize: 10, fontWeight: m.read ? 400 : 700, fontFamily: BODY }}>{m.from}</span>
                                     <span style={{ color: "#334155", fontSize: 8, fontFamily: BODY }}>{m.time}</span>
                                 </div>
-                                <div style={{ color: "#334155", fontSize: 9, whiteSpace: "nowrap" as const, overflow: "hidden", textOverflow: "ellipsis", fontFamily: BODY }}>{m.subj}</div>
+                                <div style={{ color: "#334155", fontSize: 9, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontFamily: BODY }}>{m.subj}</div>
                                 {m.urgent && <span style={{ background: "rgba(239,68,68,.2)", color: "#f87171", fontSize: 7, padding: "1px 5px", borderRadius: 8, fontWeight: 700, fontFamily: BODY }}>CRITICAL</span>}
                             </div>
                         ))}
@@ -1479,7 +1467,7 @@ function LaptopMockup() {
    FEATURES SECTION INNER
 ════════════════════════════════════════════════════════════ */
 function ScasiFeaturesSectionInner() {
-    const STATES: [number, WorkloadT, TrendT][] = [
+    const STATES = [
         [74, "High", "Rising"], [89, "High", "Rising"], [56, "Medium", "Stable"],
         [32, "Low", "Falling"], [50, "Medium", "Rising"], [92, "High", "Rising"],
     ];
@@ -1489,10 +1477,10 @@ function ScasiFeaturesSectionInner() {
     const sc = stress > 70 ? "#ef4444" : stress > 40 ? "#f97316" : "#22c55e";
     const sl = stress > 70 ? "Critical" : stress > 40 ? "Elevated" : "Nominal";
 
-    const refs = Array.from({ length: 9 }, () => useRef<HTMLDivElement>(null));
+    const refs = Array.from({ length: 9 }, () => useRef(null));
     const inViews = refs.map(r => useInView(r, { once: true, margin: "-50px" }));
 
-    const base: React.CSSProperties = {
+    const base = {
         background: "linear-gradient(145deg,#0e0b28 0%,#0b0920 100%)",
         border: "1px solid rgba(124,58,237,0.2)",
         borderRadius: 26, overflow: "hidden",
@@ -1544,8 +1532,8 @@ function ScasiFeaturesSectionInner() {
                                     ].map(pill => (
                                         <AnimatePresence key={pill.label} mode="wait">
                                             <motion.div key={pill.val} initial={{ scale: .85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: .85, opacity: 0 }} transition={{ duration: .35 }}
-                                                style={{ background: `${pill.color}10`, border: `1px solid ${pill.color}30`, borderRadius: 14, padding: "10px 8px", textAlign: "center" as const }}>
-                                                <div style={{ fontSize: 8, color: "#334155", fontFamily: BODY, marginBottom: 3, textTransform: "uppercase" as const, letterSpacing: 1 }}>{pill.label}</div>
+                                                style={{ background: `${pill.color}10`, border: `1px solid ${pill.color}30`, borderRadius: 14, padding: "10px 8px", textAlign: "center" }}>
+                                                <div style={{ fontSize: 8, color: "#334155", fontFamily: BODY, marginBottom: 3, textTransform: "uppercase", letterSpacing: 1 }}>{pill.label}</div>
                                                 <div style={{ fontSize: 13, fontWeight: 900, color: pill.color, fontFamily: BODY }}>{pill.val}</div>
                                             </motion.div>
                                         </AnimatePresence>
@@ -1578,7 +1566,7 @@ function ScasiFeaturesSectionInner() {
                             </div>
                             <div>
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                                    <span style={{ fontSize: 10, color: "#334155", fontFamily: BODY, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: 1.2 }}>Stress Trend</span>
+                                    <span style={{ fontSize: 10, color: "#334155", fontFamily: BODY, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.2 }}>Stress Trend</span>
                                     <motion.div key={`wl-${workload}`} initial={{ scale: .8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
                                         style={{ fontSize: 9, color: sc, background: `${sc}15`, padding: "3px 10px", borderRadius: 8, fontFamily: BODY, border: `1px solid ${sc}35`, fontWeight: 700 }}>
                                         {workload} Workload
@@ -1675,7 +1663,7 @@ function ScasiFeaturesSectionInner() {
                                     { stat: "40%", label: "elevated burnout risk from inbox overload", color: "#eab308", icon: <Flame size={16} color="#eab308" /> },
                                 ].map((item, i) => (
                                     <motion.div key={i} initial={{ opacity: 0, y: 14 }} animate={{ opacity: inViews[4] ? 1 : 0, y: inViews[4] ? 0 : 14 }} transition={{ delay: .2 + i * .1 }}
-                                        style={{ background: `${item.color}0c`, border: `1px solid ${item.color}28`, borderRadius: 16, padding: "14px 12px", textAlign: "center" as const }}>
+                                        style={{ background: `${item.color}0c`, border: `1px solid ${item.color}28`, borderRadius: 16, padding: "14px 12px", textAlign: "center" }}>
                                         <div style={{ display: "flex", justifyContent: "center", marginBottom: 5 }}>{item.icon}</div>
                                         <div style={{ fontFamily: DISPLAY, fontWeight: 900, fontSize: 22, color: item.color, lineHeight: 1, marginBottom: 4 }}>{item.stat}</div>
                                         <div style={{ fontFamily: BODY, fontSize: 9, color: "#475569", lineHeight: 1.55 }}>{item.label}</div>
@@ -1741,7 +1729,7 @@ function ScasiFeaturesSectionInner() {
                     <motion.div ref={refs[8]}
                         initial={{ opacity: 0, y: 36 }} animate={{ opacity: inViews[8] ? 1 : 0, y: inViews[8] ? 0 : 36 }}
                         transition={{ duration: .85, ease: [.23, 1, .32, 1] }}>
-                        <div style={{ textAlign: "center" as const, marginBottom: 24 }}>
+                        <div style={{ textAlign: "center", marginBottom: 24 }}>
                             <Pill icon={<BarChart2 size={10} color="#a78bfa" />} text="Feature Comparison" color="#a78bfa" />
                             <h2 style={{
                                 fontFamily: DISPLAY, fontWeight: 900, fontSize: 28, marginBottom: 8,
@@ -1847,7 +1835,7 @@ export default function ScasiComplete() {
                     position: "relative", zIndex: 10,
                     maxWidth: 900, margin: "0 auto",
                     padding: "80px 48px 96px",
-                    textAlign: "center" as const,
+                    textAlign: "center",
                 }}>
                     <motion.div
                         initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
@@ -1864,7 +1852,7 @@ export default function ScasiComplete() {
                             style={{ width: 7, height: 7, borderRadius: "50%", background: "#a78bfa" }} />
                         <span style={{
                             fontSize: 11, fontWeight: 800, letterSpacing: 2,
-                            textTransform: "uppercase" as const, fontFamily: BODY, color: "#c4b5fd"
+                            textTransform: "uppercase", fontFamily: BODY, color: "#c4b5fd"
                         }}>
                             Why Scasi?
                         </span>
@@ -1925,7 +1913,7 @@ export default function ScasiComplete() {
                     width: "60%", height: 300, background: "radial-gradient(ellipse,rgba(124,58,237,.18) 0%,transparent 65%)",
                     filter: "blur(60px)", pointerEvents: "none"
                 }} />
-                <div style={{ position: "relative", zIndex: 10, maxWidth: 700, margin: "0 auto", padding: "96px 48px 120px", textAlign: "center" as const }}>
+                <div style={{ position: "relative", zIndex: 10, maxWidth: 700, margin: "0 auto", padding: "96px 48px 120px", textAlign: "center" }}>
                     <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: .8 }}>
                         <Chip label="Get Started" dark />
                         <h2 style={{

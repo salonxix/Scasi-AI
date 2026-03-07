@@ -2,19 +2,6 @@
 
 import React from "react";
 
-type Props = {
-    emails: any[];
-    folder: string;
-    activeProject: string | null;
-    starredIds: string[];
-    snoozedIds: string[];
-    doneIds: string[];
-    openMail: (id: string, mail: any) => void;
-    generateAIPriorityForMail: (mail: any) => void;
-    getPriorityScore: (mail: any) => number;
-    isSpamEmail: (mail: any) => boolean;
-};
-
 export default function EmailListCompact({
     emails,
     folder,
@@ -26,7 +13,7 @@ export default function EmailListCompact({
     generateAIPriorityForMail,
     getPriorityScore,
     isSpamEmail,
-}: Props) {
+}) {
     // apply general filters (hide snoozed/done always)
     let list = emails.filter((m) => !doneIds.includes(m.id) && !snoozedIds.includes(m.id));
 
@@ -115,7 +102,7 @@ export default function EmailListCompact({
 }
 
 /** small helper local (can't import page's getPriorityColor easily) */
-function getPriorityColorInline(score: number) {
+function getPriorityColorInline(score) {
     if (score >= 80) return "#ff4d4d";
     if (score >= 50) return "#ffc107";
     return "#4caf50";

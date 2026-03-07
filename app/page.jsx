@@ -2,17 +2,13 @@
 
 import { useEffect, useState, Fragment, useRef, useCallback } from "react";
 import { signOut, useSession } from "next-auth/react";
-import ScassiHero3D from "@/components/ScassiHero3D";
-import Header from "@/components/dashboard/Header";
 import Footer from "@/components/Footer";
-import Dashboard from "@/components/dashboard/Dashboard";
 import MailMindDashboard from "@/components/dashboard/MailMindDashboard";
 import dynamic from "next/dynamic";
-import TopNavbar from "@/components/dashboard/TopNavbar";
-import EmailCard from "@/components/dashboard/EmailCard";
 import { motion, AnimatePresence } from "framer-motion";
+import Header from "@/components/dashboard/Header";
 
-const ScasiHero3D = dynamic(
+const ScassiHero3D = dynamic(
   () => import("@/components/ScassiHero3D"),
   { ssr: false, loading: () => <div style={{ height: "100vh" }} /> }
 );
@@ -29,7 +25,7 @@ const MAIL_LINES = [
 ];
 const MAIL_LIFT = -30;
 
-function PurpleOrb({ visible }: { visible: boolean }) {
+function PurpleOrb({ visible }) {
   return (
     <AnimatePresence>
       {visible && (
@@ -157,10 +153,10 @@ function EmptyStateEnvelope() {
   );
 }
 
-function MailLoadingScreen({ onDone }: { onDone: () => void }) {
+function MailLoadingScreen({ onDone }) {
   const [phase, setPhase] = useState(0);
   // Store onDone in a ref so the effect never re-runs when the parent re-renders
-  const doneRef = useRef<() => void>(onDone);
+  const doneRef = useRef(onDone);
   const firedRef = useRef(false);
 
   useEffect(() => {
@@ -171,7 +167,6 @@ function MailLoadingScreen({ onDone }: { onDone: () => void }) {
       if (!firedRef.current) {
         firedRef.current = true;
         doneRef.current();
-
       }
     }, 2200);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
@@ -306,7 +301,7 @@ export default function Home() {
   }, [session]);
 
   // ── view state to control which screen is shown ──
-  const [appView, setAppView] = useState<"landing" | "loading" | "mailmind" | "inbox">("landing");
+  const [appView, setAppView] = useState("landing");
   // ── which folder to open when inbox loads ──
   const [initialFolder, setInitialFolder] = useState("inbox");
   // Track if we've shown the loading animation
@@ -326,12 +321,12 @@ export default function Home() {
   }, []);
 
   // Called by MailMindDashboard when user clicks any nav item
-  const handleMailMindNavigate = (folder: string) => {
+  const handleMailMindNavigate = (folder) => {
     setActiveFolder(folder);
     setAppView("inbox");
   };
 
-  const [hoverFile, setHoverFile] = useState<any>(null);
+  const [hoverFile, setHoverFile] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
   // 🕒 Current Date & Time
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -342,7 +337,7 @@ export default function Home() {
   const [activePage, setActivePage] = useState("overview");
   const [activeView, setActiveView] = useState("dashboard");
 
-  const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
+  const [hoveredBtn, setHoveredBtn] = useState(null);
 
   // 🔔 Notification Count
   const [newMailCount, setNewMailCount] = useState(0);
@@ -350,7 +345,7 @@ export default function Home() {
   const [showNotifications, setShowNotifications] = useState(false);
 
   // 🔔 Store New Emails List
-  const [newMails, setNewMails] = useState<any[]>([]);
+  const [newMails, setNewMails] = useState([]);
   // ✅ Toolbar Feature States
   const [showCompose, setShowCompose] = useState(false);
   const [showGemini, setShowGemini] = useState(false);
@@ -360,9 +355,9 @@ export default function Home() {
   const [editableReply, setEditableReply] = useState("");
   const [copied, setCopied] = useState(false);
   const [sending, setSending] = useState(false);
-  const [aiPriorityMap, setAiPriorityMap] = useState<any>({});
+  const [aiPriorityMap, setAiPriorityMap] = useState({});
   // ⭐ Starred Emails
-  const [starredIds, setStarredIds] = useState<string[]>([]);
+  const [starredIds, setStarredIds] = useState([]);
   // ✅ Load Starred Emails from localStorage on startup
   useEffect(() => {
     const savedStarred = localStorage.getItem("starredIds");
@@ -372,7 +367,7 @@ export default function Home() {
   }, []);
 
   // ⏳ Snoozed Emails (hidden temporarily)
-  const [snoozedIds, setSnoozedIds] = useState<string[]>([]);
+  const [snoozedIds, setSnoozedIds] = useState([]);
   // ✅ Load Snoozed Emails from localStorage on startup
   useEffect(() => {
     const savedSnoozed = localStorage.getItem("snoozedIds");
@@ -384,7 +379,7 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // ✅ Done Emails (removed)
-  const [doneIds, setDoneIds] = useState<string[]>([]);
+  const [doneIds, setDoneIds] = useState([]);
   // ✅ Load Saved Folders on Startup
   useEffect(() => {
     const savedStarred = JSON.parse(localStorage.getItem("starredIds") || "[]");
@@ -413,16 +408,16 @@ export default function Home() {
   const [aiReason, setAiReason] = useState("");
   const [loadingAI, setLoadingAI] = useState(false);
 
-  const [emails, setEmails] = useState<any[]>([]);
-  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+  const [emails, setEmails] = useState([]);
+  const [nextPageToken, setNextPageToken] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const [selectedMail, setSelectedMail] = useState<any>(null);
+  const [selectedMail, setSelectedMail] = useState(null);
 
-  const [summary, setSummary] = useState<string>("");
+  const [summary, setSummary] = useState("");
   const [summarizing, setSummarizing] = useState(false);
 
-  const [tasks, setTasks] = useState<any[]>([]);
+  const [tasks, setTasks] = useState([]);
   // ✅ FIX 1: Default tab to "All Mails"
   const [activeTab, setActiveTab] = useState("All Mails");
 
@@ -430,7 +425,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
 
   // ✅ Deadline + Urgency Inputs
-  const [deadline, setDeadline] = useState<string | null>("");
+  const [deadline, setDeadline] = useState("");
   const [urgency, setUrgency] = useState("Normal");
 
   // ✅ Slides list (keep outside if)
@@ -550,7 +545,7 @@ export default function Home() {
   };
 
   // ✅ FIXED: Combined function that fetches email AND generates AI
-  const openMailAndGenerateAI = async (id: string, mailPreview: any) => {
+  const openMailAndGenerateAI = async (id, mailPreview) => {
     setAiSummary("");
     setAiReason("");
     setAiReply("");
@@ -611,7 +606,7 @@ export default function Home() {
     setLoadingReply(false);
   }
 
-  async function generateSummary(mail: any) {
+  async function generateSummary(mail) {
     setLoadingAI(true);
     const emailContent = cleanEmailBody(mail.body || mail.snippet || "");
     if (!emailContent) {
@@ -635,7 +630,7 @@ export default function Home() {
   }
 
   // ✅ NEW: AI Priority function for individual emails
-  async function generateAIPriorityForMail(mail: any) {
+  async function generateAIPriorityForMail(mail) {
     if (aiPriorityMap[mail.id]) return;
     const res = await fetch("/api/ai/priority", {
       method: "POST",
@@ -647,14 +642,14 @@ export default function Home() {
     });
     const data = await res.json();
     if (data.result?.score) {
-      setAiPriorityMap((prev: any) => ({
+      setAiPriorityMap((prev) => ({
         ...prev,
         [mail.id]: data.result,
       }));
     }
   }
 
-  async function generateExplanation(mail: any) {
+  async function generateExplanation(mail) {
     setLoadingAI(true);
     const res = await fetch("/api/ai/explain", {
       method: "POST",
@@ -698,9 +693,9 @@ export default function Home() {
     setSummarizing(false);
   };
 
-  function extractTasks(text: string) {
+  function extractTasks(text) {
     const lower = text.toLowerCase();
-    const tasks: string[] = [];
+    const tasks = [];
     if (
       lower.includes("payment due") ||
       lower.includes("pay now") ||
@@ -732,7 +727,7 @@ export default function Home() {
     return tasks;
   }
 
-  function extractDeadline(text: string) {
+  function extractDeadline(text) {
     if (!text) return null;
     const lower = text.toLowerCase();
     if (lower.includes("tomorrow")) return "Tomorrow";
@@ -748,7 +743,7 @@ export default function Home() {
     return null;
   }
 
-  function getUrgencyLevel(deadlineText: string | null) {
+  function getUrgencyLevel(deadlineText) {
     if (!deadlineText) return "None";
     if (deadlineText === "Today") return "🔥 Very High";
     if (deadlineText === "Tomorrow") return "⚠️ High";
@@ -780,16 +775,16 @@ export default function Home() {
         let count = 0;
         if (lastSeen) {
           const lastTime = new Date(lastSeen).getTime();
-          count = (data.emails || []).filter((mail: any) => {
+          count = (data.emails || []).filter((mail) => {
             const mailTime = new Date(mail.date).getTime();
             return mailTime > lastTime;
           }).length;
         }
         setNewMailCount(count);
-        let freshMails: any[] = [];
+        let freshMails = [];
         if (lastSeen) {
           const lastTime = new Date(lastSeen).getTime();
-          freshMails = (data.emails || []).filter((mail: any) => {
+          freshMails = (data.emails || []).filter((mail) => {
             const mailTime = new Date(mail.date).getTime();
             return mailTime > lastTime;
           });
@@ -812,7 +807,7 @@ export default function Home() {
     await loadEmails();
   };
 
-  function getEmailCategory(mail: any) {
+  function getEmailCategory(mail) {
     const subject = (mail.subject || "").toLowerCase();
     const snippet = (mail.snippet || "").toLowerCase();
     const text = subject + " " + snippet;
@@ -842,7 +837,7 @@ export default function Home() {
     return "Low Energy";
   }
 
-  function getPriorityScore(mail: any) {
+  function getPriorityScore(mail) {
     let score = 0;
     const subject = (mail.subject || "").toLowerCase();
     const snippet = (mail.snippet || "").toLowerCase();
@@ -885,14 +880,14 @@ export default function Home() {
     return Math.min(score, 100);
   }
 
-  function getPriorityColor(score: number) {
+  function getPriorityColor(score) {
     if (score >= 80) return "#DC2626";
     if (score >= 50) return "#D97706";
     return "#059669";
   }
 
   // ── DISTINCT CATEGORY COLOURS ─────────────────────────────────
-  function getCategoryColor(category: string) {
+  function getCategoryColor(category) {
     if (category === "Do Now") return "#DC2626"; // red
     if (category === "Needs Decision") return "#D97706"; // amber
     if (category === "Waiting") return "#2563EB"; // blue
@@ -900,7 +895,7 @@ export default function Home() {
     return "#7C3AED";                                    // purple default
   }
 
-  function getCategoryBg(category: string) {
+  function getCategoryBg(category) {
     if (category === "Do Now") return "#FEF2F2";
     if (category === "Needs Decision") return "#FFFBEB";
     if (category === "Waiting") return "#EFF6FF";
@@ -908,7 +903,7 @@ export default function Home() {
     return "#F5F3FF";
   }
 
-  function getBurnoutStats(emails: any[]) {
+  function getBurnoutStats(emails) {
     let stressScore = 0;
     emails.forEach((mail) => {
       const text =
@@ -951,7 +946,7 @@ export default function Home() {
     };
   }
 
-  function isSpamEmail(mail: any) {
+  function isSpamEmail(mail) {
     const subject = (mail.subject || "").toLowerCase();
     const snippet = (mail.snippet || "").toLowerCase();
     const from = (mail.from || "").toLowerCase();
@@ -970,13 +965,13 @@ export default function Home() {
     return false;
   }
 
-  function isFirstTimeSender(mail: any, allEmails: any[]) {
+  function isFirstTimeSender(mail, allEmails) {
     const sender = mail.from;
     const count = allEmails.filter((m) => m.from === sender).length;
     return count === 1;
   }
 
-  function extractFirstLink(text: string) {
+  function extractFirstLink(text) {
     if (!text) return null;
     const hrefMatch = text.match(/href=["']([^"']+)["']/i);
     if (hrefMatch && hrefMatch[1] && hrefMatch[1].startsWith("http")) {
@@ -1017,7 +1012,7 @@ export default function Home() {
     return link;
   }
 
-  function cleanEmailBody(text: string) {
+  function cleanEmailBody(text) {
     return text
       .replace(/<[^>]*>/g, "")
       .replace(/https?:\/\/\S+/g, "")
@@ -1027,7 +1022,7 @@ export default function Home() {
   }
 
   /* ✅ ADD THIS EXACTLY HERE */
-  function extractEmail(raw: string) {
+  function extractEmail(raw) {
     if (!raw) return "";
     const match = raw.match(/<(.+?)>/);
     if (match) return match[1];
@@ -1036,7 +1031,7 @@ export default function Home() {
   }
 
   // ✅ Helper function to get initials from email
-  function getInitials(email: string) {
+  function getInitials(email) {
     if (!email) return "?";
     const name = email.split("@")[0];
     const parts = name.split(/[._-]/);
@@ -1061,7 +1056,7 @@ export default function Home() {
     return (
       <main className="min-h-screen">
         <ScassiHero3D />
-        <Header />
+        {Header && <Header />}
         <Footer />
       </main>
     );
@@ -1648,7 +1643,7 @@ export default function Home() {
                   {/* tasks */}
                   <div className="card anim">
                     <div className="card-ttl"><Ico.Check /> Tasks Extracted</div>
-                    {extractTasks(selectedMail?.snippet || selectedMail?.body || "").map((task: string, i: number) => (
+                    {extractTasks(selectedMail?.snippet || selectedMail?.body || "").map((task, i) => (
                       <div key={i} style={{
                         display: "flex", alignItems: "flex-start", gap: 5,
                         padding: "5px 7px", borderRadius: 6, background: "#F5F3FF",
@@ -1773,7 +1768,7 @@ export default function Home() {
                   {emails
                     .filter(m => m.id !== selectedMail.id && m.subject?.includes(selectedMail.subject.split(" ")[0]))
                     .slice(0, 3)
-                    .map((m: any) => (
+                    .map((m) => (
                       <div
                         key={m.id}
                         onClick={() => openMailAndGenerateAI(m.id, m)}
@@ -1810,7 +1805,7 @@ export default function Home() {
                     <div className="card-ttl">
                       <Ico.Attach /> Attachments ({selectedMail.attachments.length})
                     </div>
-                    {selectedMail.attachments.map((file: any) => (
+                    {selectedMail.attachments.map((file) => (
                       <div
                         key={file.attachmentId}
                         style={{
