@@ -15,8 +15,8 @@ export async function GET() {
     // Test 3: Try to connect with anon client
     let anonConnectionWorks = false;
     try {
-      const { data, error } = await supabase.from('users').select('count').limit(1);
-      anonConnectionWorks = !error || error.code === 'PGRST116'; // PGRST116 = no rows, but connection works
+      const { error } = await supabase.from('users').select('*', { count: 'exact', head: true });
+      anonConnectionWorks = !error;
     } catch (e) {
       anonConnectionWorks = false;
     }
@@ -26,8 +26,8 @@ export async function GET() {
     if (hasServiceRole) {
       try {
         const admin = getSupabaseAdmin();
-        const { error } = await admin.from('users').select('count').limit(1);
-        adminConnectionWorks = !error || error.code === 'PGRST116';
+        const { error } = await admin.from('users').select('*', { count: 'exact', head: true });
+        adminConnectionWorks = !error;
       } catch (e) {
         adminConnectionWorks = false;
       }
