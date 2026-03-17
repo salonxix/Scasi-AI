@@ -9,6 +9,62 @@ import type { EmailCategory } from '../nlp/types';
 import { nlpAgent } from '../nlp';
 import { ragAgent } from '../rag';
 import { pMapSettled } from '../_shared/utils';
+import { getServiceRoleClient } from '../_shared/supabase';
+
+// Follow-up signal phrases to scan for in email bodies
+const FOLLOW_UP_SIGNALS = [
+    'waiting for your response',
+    'waiting to hear from you',
+    'please reply',
+    'please respond',
+    'let me know',
+    'looking forward to your reply',
+    'following up',
+    'just checking in',
+    'any update',
+    'please confirm',
+    'could you get back to me',
+    'get back to me',
+    'awaiting your',
+    'please advise',
+];
+
+/**
+ * Scans an email body for follow-up signals and stores a record in Supabase.
+ * Returns the detected signal string, or null if none found.
+ */
+export async function detectFollowUps(
+    userId: string,
+    email: {
+        emailId?: string;
+        gmailId?: string;
+        subject: string;
+        from: string;
+        body: string;
+    }
+): Promise<string | null> {
+    const lowerBody = email.body.toLowerCase();
+    const matched = FOLLOW_UP_SIGNALS.find(signal => lowerBody.includes(signal));
+    if (!matched) return null;
+
+    try {
+        const db = getServiceRoleClient();
+        await db.from('follow_ups').insert({
+            user_id: userId,
+            email_id: email.emailId ?? null,
+            gmail_id: email.gmailId ?? null,
+            subject: email.subject,
+            recipient: email.from,
+            signal: matched,
+            status: 'pending',
+        });
+    } catch (err) {
+        // Non-fatal — log and continue
+        console.warn('[workflows] detectFollowUps store failed:', err instanceof Error ? err.message : err);
+    }
+
+    return matched;
+}
 
 interface ClassifiedEmail {
     emailId: string;
@@ -76,7 +132,7 @@ export async function handleForMe(
     // Step 4: Draft Reply
     const replyStart = Date.now();
     const reply = await nlpAgent.draftReply(
-        { subject: email.subject, snippet: email.snippet, tone: 'professional' },
+        { subject: email.subject, snippet: email.snippet, tone: 'professional', from: email.from },
         traceId
     );
     trace.push({
@@ -84,6 +140,22 @@ export async function handleForMe(
         completedAt: new Date().toISOString(),
         durationMs: Date.now() - replyStart,
         output: reply,
+    });
+
+    // Step 5: Follow-up detection
+    const followUpStart = Date.now();
+    const followUpSignal = await detectFollowUps(ctx.userId as string, {
+        emailId: email.gmailId,
+        gmailId: email.gmailId,
+        subject: email.subject,
+        from: email.from,
+        body: email.body || email.snippet,
+    });
+    trace.push({
+        agentName: 'orchestrator.followUp',
+        completedAt: new Date().toISOString(),
+        durationMs: Date.now() - followUpStart,
+        output: followUpSignal ? { detected: true, signal: followUpSignal } : { detected: false },
     });
 
     const taskList = tasks.tasks.length > 0
@@ -105,6 +177,7 @@ export async function handleForMe(
         `**Draft Reply:**`,
         reply.reply,
         ``,
+        followUpSignal ? `🔔 **Follow-up tracked** — detected signal: "${followUpSignal}"` : '',
         `⚠️ Review before sending. Click "Send" to approve.`,
     ].filter(Boolean).join('\n');
 

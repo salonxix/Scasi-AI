@@ -114,11 +114,13 @@ export async function GET(req) {
     // ✅ Return Response
     return NextResponse.json({
       id,
-      threadId,        // ✅ ADD
-      messageId,       // ✅ ADD
+      threadId,
+      messageId,
 
       subject: getHeader("Subject"),
       from: getHeader("From"),
+      to: getHeader("To"),
+      replyTo: getHeader("Reply-To"),
       date: getHeader("Date"),
 
       body,

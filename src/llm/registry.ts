@@ -80,9 +80,9 @@ export const MODELS = {
         contextWindow: 131072,
     },
 
-    // ── OpenRouter Key 4: Hunter Alpha (OPENROUTER_API_KEY_HUNTER) ─────
+    // ── OpenRouter Key 4: Universal fallback (OPENROUTER_API_KEY_HUNTER) ─
     OR_HUNTER_ALPHA: {
-        id: 'openrouter/hunter-alpha',
+        id: 'meta-llama/llama-3.1-8b-instruct:free',
         provider: 'openrouter' as ModelProvider,
         apiKeyEnv: 'OPENROUTER_API_KEY_HUNTER',
         contextWindow: 131072,

@@ -80,6 +80,7 @@ export const DraftReplyInputSchema = z.object({
     subject: z.string().max(1000),
     snippet: z.string().max(10_000),
     tone: z.enum(['professional', 'casual', 'formal']).default('professional'),
+    from: z.string().max(500).optional(),
 });
 export type DraftReplyInput = z.infer<typeof DraftReplyInputSchema>;
 

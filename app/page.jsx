@@ -7,6 +7,7 @@ import MailMindDashboard from "@/components/dashboard/MailMindDashboard";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "@/components/dashboard/Header";
+import GeminiSidebar from "@/components/GeminiSidebar";
 
 const ScassiHero3D = dynamic(
   () => import("@/components/ScassiHero3D"),
@@ -347,6 +348,116 @@ export default function Home() {
   const [aiReply, setAiReply] = useState("");
   const [loadingReply, setLoadingReply] = useState(false);
   const [editableReply, setEditableReply] = useState("");
+  const [sendingReply, setSendingReply] = useState(false);
+  const [replySent, setReplySent] = useState(false);
+
+  async function sendDraftReply() {
+    if (!selectedMail || !handleForMeResult) return;
+
+    // Extract only the draft reply body from the AI markdown output
+    // The orchestrator formats it as: **Draft Reply:**\n<body>\n\n⚠️ Review...
+    let draftBody = handleForMeResult;
+
+    // Strategy 1: match **Draft Reply:** heading followed by content
+    const draftHeadingMatch = handleForMeResult.match(
+      /\*\*Draft Reply:\*\*\s*\n+([\s\S]+?)(?=\n{0,2}⚠️|$)/
+    );
+    if (draftHeadingMatch) {
+      draftBody = draftHeadingMatch[1].trim();
+    } else {
+      // Strategy 2: match from greeting to end/warning
+      const greetingMatch = handleForMeResult.match(
+        /(?:^|\n)((?:Dear|Hi|Hello|Good\s+\w+)[\s\S]+?)(?=\n{0,2}⚠️|$)/i
+      );
+      if (greetingMatch) draftBody = greetingMatch[1].trim();
+    }
+
+    // Strip any remaining ⚠️ warning lines
+    draftBody = draftBody.replace(/⚠️[^\n]*/g, "").trim();
+
+    // Extract recipient — priority: Reply-To > From (skip if own email or noreply) > To
+    // Handles "Display Name <email@domain.com>" and plain "email@domain.com"
+    function extractEmailAddr(field) {
+      if (!field) return "";
+      const bracket = field.match(/<([^>]+@[^>]+)>/);
+      if (bracket) return bracket[1].trim().toLowerCase();
+      const plain = field.match(/([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/);
+      return plain ? plain[1].trim().toLowerCase() : "";
+    }
+
+    function isUnreplyable(addr) {
+      if (!addr) return true;
+      const local = addr.split("@")[0].toLowerCase();
+      return (
+        local.startsWith("noreply") ||
+        local.startsWith("no-reply") ||
+        local.startsWith("donotreply") ||
+        local.startsWith("do-not-reply") ||
+        local === "mailer-daemon" ||
+        local === "postmaster"
+      );
+    }
+
+    const myEmail = (session?.user?.email || "").toLowerCase();
+    const replyToAddr = extractEmailAddr(selectedMail.replyTo);
+    const fromAddr    = extractEmailAddr(selectedMail.from);
+    const toAddr      = extractEmailAddr(selectedMail.to);
+
+    // Pick the first address that is replyable and isn't our own inbox
+    const to =
+      (replyToAddr && replyToAddr !== myEmail && !isUnreplyable(replyToAddr))
+        ? replyToAddr
+      : (fromAddr && fromAddr !== myEmail && !isUnreplyable(fromAddr))
+        ? fromAddr
+      : (toAddr && toAddr !== myEmail && !isUnreplyable(toAddr))
+        ? toAddr
+        : null;
+
+    if (!to) {
+      alert(
+        `❌ This email was sent from a no-reply address and cannot be replied to.\n\nFrom: "${selectedMail.from}"\nTo: "${selectedMail.to}"`
+      );
+      return;
+    }
+
+    setSendingReply(true);
+    try {
+      console.log("🚀 Sending reply with data:", {
+        to,
+        subject: selectedMail.subject?.substring(0, 50),
+        threadId: selectedMail.threadId || selectedMail.id,
+        messageId: selectedMail.messageId?.substring(0, 30),
+        bodyLength: draftBody.length
+      });
+
+      const res = await fetch("/api/gmail/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to,
+          subject: selectedMail.subject || "",
+          body: draftBody,
+          threadId: selectedMail.threadId || selectedMail.id,
+          messageId: selectedMail.messageId || "",
+        }),
+      });
+      const data = await res.json();
+      
+      console.log("📬 Send response:", data);
+      
+      if (data.success) {
+        setReplySent(true);
+        console.log("✅ Reply sent successfully to:", to);
+      } else {
+        alert("❌ Failed to send: " + (data.error || "Unknown error"));
+      }
+    } catch (err) {
+      console.error("❌ Send error:", err);
+      alert("❌ Network error: " + err.message);
+    }
+    setSendingReply(false);
+  }
+
   const [copied, setCopied] = useState(false);
   const [aiPriorityMap, setAiPriorityMap] = useState({});
   const [handleForMeResult, setHandleForMeResult] = useState("");
@@ -523,6 +634,7 @@ export default function Home() {
     setUrgency("");
     setHandleForMeResult("");
     setLoadingHandleForMe(false);
+    setReplySent(false);
     const res = await fetch(`/api/gmail/message?id=${id}`);
     const fullEmailData = await res.json();
     setSelectedMail(fullEmailData);
@@ -539,6 +651,7 @@ export default function Home() {
     if (!mail) return;
     setLoadingHandleForMe(true);
     setHandleForMeResult("");
+    setReplySent(false);
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -546,15 +659,17 @@ export default function Home() {
         body: JSON.stringify({
           userMessage: "Handle this email for me",
           emailContext: {
+            gmailId: mail.id || "",
             subject: mail.subject || "",
-            snippet: mail.snippet || mail.body || "",
+            snippet: (mail.snippet || "").slice(0, 500),
             from: mail.from || "",
-            body: mail.body || mail.snippet || "",
+            body: (mail.body || mail.snippet || "").slice(0, 8000),
           },
         }),
       });
       if (!res.ok) {
-        setHandleForMeResult("❌ Failed to process email. Please try again.");
+        const errData = await res.json().catch(() => ({}));
+        setHandleForMeResult("❌ " + (errData.error || "Failed to process email. Please try again."));
         setLoadingHandleForMe(false);
         return;
       }
@@ -574,7 +689,7 @@ export default function Home() {
           const dataLine = chunk.split("\n").find(l => l.startsWith("data: "));
           if (dataLine) {
             try {
-              const evt = JSON.parse(dataLine.replace("data: ", ""));
+              const evt = JSON.parse(dataLine.slice(6));
               if (evt.type === "token") {
                 collected += evt.text;
                 setHandleForMeResult(collected);
@@ -1650,17 +1765,117 @@ export default function Home() {
                 {(handleForMeResult || loadingHandleForMe) && (
                   <div className="card-pu anim" style={{ marginBottom: 8 }}>
                     <div className="card-ttl"><Ico.Zap /> Handle For Me — AI Analysis</div>
-                    <div style={{
-                      background: "#fff", borderRadius: 7, padding: "10px 12px",
-                      fontSize: 11.5, color: "#4C1D95", lineHeight: 1.7,
-                      border: "1px solid #DDD6FE", whiteSpace: "pre-wrap", minHeight: 60,
-                    }}>
-                      {loadingHandleForMe && !handleForMeResult
-                        ? <span style={{ color: "#A78BFA" }}>🔄 Analyzing email — classifying, summarizing, extracting tasks, drafting reply…</span>
-                        : handleForMeResult || <span style={{ color: "#C4B5FD" }}>Click Handle For Me to start</span>}
-                    </div>
+
+                    {/* Step progress — shown while loading */}
+                    {loadingHandleForMe && (
+                      <div style={{
+                        background: "#F5F3FF", borderRadius: 10, padding: "12px 14px",
+                        border: "1px solid #DDD6FE", marginBottom: 8,
+                      }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "#7C3AED", marginBottom: 10, letterSpacing: "0.04em" }}>
+                          ⚡ Processing your email…
+                        </div>
+                        {[
+                          { label: "Classify", icon: "🏷️" },
+                          { label: "Summarize", icon: "📝" },
+                          { label: "Extract Tasks", icon: "✅" },
+                          { label: "Draft Reply", icon: "✍️" },
+                        ].map((step, i) => {
+                          const progress = handleForMeResult.length;
+                          const thresholds = [0, 80, 200, 400];
+                          const isDone = progress > (thresholds[i + 1] ?? Infinity);
+                          const isActive = progress >= thresholds[i] && !isDone;
+                          return (
+                            <div key={step.label} style={{
+                              display: "flex", alignItems: "center", gap: 10,
+                              padding: "7px 10px", borderRadius: 8, marginBottom: 5,
+                              background: isDone ? "#F0FDF4" : isActive ? "#EFF6FF" : "rgba(255,255,255,0.6)",
+                              border: `1px solid ${isDone ? "#BBF7D0" : isActive ? "#BFDBFE" : "#E5E7EB"}`,
+                              transition: "all 0.3s ease",
+                            }}>
+                              <div style={{
+                                width: 22, height: 22, borderRadius: "50%", flexShrink: 0,
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                background: isDone ? "#16A34A" : isActive ? "#2563EB" : "#E5E7EB",
+                              }}>
+                                {isDone
+                                  ? <span style={{ color: "#fff", fontWeight: 900, fontSize: 12 }}>✓</span>
+                                  : isActive
+                                    ? <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#fff", display: "block", animation: "hfm-pulse 1.2s ease-in-out infinite" }} />
+                                    : <span style={{ fontSize: 10, color: "#9CA3AF", fontWeight: 700 }}>{i + 1}</span>
+                                }
+                              </div>
+                              <span style={{ fontSize: 12, fontWeight: 600, color: isDone ? "#16A34A" : isActive ? "#2563EB" : "#9CA3AF" }}>
+                                {step.icon} {step.label}
+                              </span>
+                              {isActive && <span style={{ marginLeft: "auto", fontSize: 10, color: "#93C5FD", fontStyle: "italic" }}>running…</span>}
+                              {isDone && <span style={{ marginLeft: "auto", fontSize: 10, color: "#86EFAC" }}>done</span>}
+                            </div>
+                          );
+                        })}
+                        {handleForMeResult && (
+                          <div style={{
+                            marginTop: 8, padding: "8px 10px", borderRadius: 7,
+                            background: "rgba(255,255,255,0.7)", border: "1px solid #DDD6FE",
+                            fontSize: 10.5, color: "#7C3AED", lineHeight: 1.6,
+                            maxHeight: 56, overflow: "hidden",
+                            maskImage: "linear-gradient(to bottom, black 50%, transparent 100%)",
+                            WebkitMaskImage: "linear-gradient(to bottom, black 50%, transparent 100%)",
+                          }}>
+                            {handleForMeResult.slice(0, 200)}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Editable reply — shown after loading completes */}
+                    {handleForMeResult && !loadingHandleForMe && (
+                      <>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "#7C3AED", marginBottom: 6, display: "flex", alignItems: "center", gap: 5 }}>
+                          ✍️ Draft Reply <span style={{ fontWeight: 400, color: "#A78BFA", fontSize: 10 }}>(editable)</span>
+                        </div>
+                        <textarea
+                          value={handleForMeResult}
+                          onChange={(e) => setHandleForMeResult(e.target.value)}
+                          rows={8}
+                          style={{
+                            width: "100%", boxSizing: "border-box",
+                            background: "#fff", borderRadius: 8, padding: "10px 12px",
+                            fontSize: 12, color: "#1e1b4b", lineHeight: 1.7,
+                            border: "1.5px solid #DDD6FE", resize: "vertical",
+                            fontFamily: "inherit", outline: "none",
+                          }}
+                          onFocus={e => e.target.style.borderColor = "#7C3AED"}
+                          onBlur={e => e.target.style.borderColor = "#DDD6FE"}
+                        />
+                        <div style={{ marginTop: 8, display: "flex", gap: 6, alignItems: "center" }}>
+                          {replySent ? (
+                            <span style={{ fontSize: 12, color: "#16A34A", fontWeight: 700, padding: "5px 0" }}>
+                              ✅ Reply sent successfully
+                            </span>
+                          ) : (
+                            <button
+                              className="ai-btn sm"
+                              onClick={sendDraftReply}
+                              disabled={sendingReply}
+                              style={{ opacity: sendingReply ? 0.7 : 1 }}
+                            >
+                              <Ico.Send /> {sendingReply ? "Sending…" : "Send Reply"}
+                            </button>
+                          )}
+                          <button
+                            className="btn"
+                            onClick={() => { setHandleForMeResult(""); setReplySent(false); }}
+                            style={{ fontSize: 11 }}
+                          >
+                            Dismiss
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
+                <style>{`@keyframes hfm-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.85)} }`}</style>
 
                 {/* ── AI SUMMARY + WHY IMPORTANT ── */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
@@ -1960,36 +2175,15 @@ export default function Home() {
           GEMINI / ASK AI MODAL
       ══════════════════════════════════════════════════ */}
       {showGemini && (
-        <div className="overlay">
-          <div className="modal anim">
-            <div className="modal-ttl">Ask AI about this Email</div>
-            <div style={{ fontSize: 11, color: "#A78BFA", marginBottom: 10 }}>
-              Summarize, explain, extract action items, next steps — anything.
-            </div>
-            <textarea
-              rows={3} value={geminiQuestion} onChange={e => setGeminiQuestion(e.target.value)}
-              placeholder="Ask anything about this email…"
-              className="inp" style={{ resize: "none", marginBottom: 8 }}
+        <div className="overlay" onClick={() => setShowGemini(false)}>
+          <div onClick={e => e.stopPropagation()}>
+            <GeminiSidebar
+              selectedMail={selectedMail}
+              onSelectEmail={(id) => {
+                const mail = emails.find(e => e.id === id);
+                if (mail) { setSelectedMail(mail); setShowGemini(false); }
+              }}
             />
-            <button className="ai-btn" onClick={askGemini} style={{ width: "100%", justifyContent: "center", marginBottom: 8 }}>
-              <Ico.Sparkle /> {loadingGemini ? "Thinking…" : "Ask AI"}
-            </button>
-            {geminiReply && (
-              <div className="anim" style={{
-                background: "#F5F3FF", borderRadius: 8, padding: "9px 11px",
-                fontSize: 11.5, color: "#4C1D95", lineHeight: 1.65,
-                border: "1px solid #DDD6FE", whiteSpace: "pre-wrap", marginBottom: 8,
-              }}>
-                {geminiReply}
-              </div>
-            )}
-            <button
-              className="btn"
-              onClick={() => { setShowGemini(false); setGeminiQuestion(""); setGeminiReply(""); }}
-              style={{ width: "100%", justifyContent: "center", padding: "7px 0" }}
-            >
-              Close
-            </button>
           </div>
         </div>
       )}

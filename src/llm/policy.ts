@@ -34,18 +34,18 @@ export const taskPolicies: Record<LLMTaskType, TaskModelPolicy> = {
     },
     classify: {
         task: 'classify',
-        primary: MODELS.OR_NEMOTRON_30B,
-        fallbackChain: [MODELS.GROQ_LLAMA_3_1_8B, MODELS.OR_HUNTER_ALPHA],
+        primary: MODELS.GROQ_LLAMA_3_1_8B,
+        fallbackChain: [MODELS.OR_NEMOTRON_30B, MODELS.OR_HUNTER_ALPHA],
     },
     extract: {
         task: 'extract',
-        primary: MODELS.OR_GPT_OSS_120B,
-        fallbackChain: [MODELS.GROQ_LLAMA_3_3_70B, MODELS.OR_HUNTER_ALPHA],
+        primary: MODELS.GROQ_LLAMA_3_3_70B,
+        fallbackChain: [MODELS.OR_GPT_OSS_120B, MODELS.OR_HUNTER_ALPHA],
     },
     summarize: {
         task: 'summarize',
-        primary: MODELS.OR_GEMINI_FLASH,
-        fallbackChain: [MODELS.OR_GPT_OSS_120B, MODELS.OR_HUNTER_ALPHA],
+        primary: MODELS.GROQ_LLAMA_3_3_70B,
+        fallbackChain: [MODELS.OR_GEMINI_FLASH, MODELS.OR_GPT_OSS_120B, MODELS.OR_HUNTER_ALPHA],
     },
     reply: {
         task: 'reply',
@@ -68,3 +68,4 @@ export const taskPolicies: Record<LLMTaskType, TaskModelPolicy> = {
         fallbackChain: [],
     },
 };
+

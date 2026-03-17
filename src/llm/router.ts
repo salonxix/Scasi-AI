@@ -212,39 +212,78 @@ export class LLMRouter {
         prompt: string,
         options: GenerationOptions = {}
     ): AsyncIterable<string> {
-        const model = taskPolicies[task].primary;
-        const startTime = Date.now();
-        let collectedText = '';
-        let lastError: unknown;
+        const policy = taskPolicies[task];
+        const modelChain = [policy.primary, ...policy.fallbackChain];
         const estPromptTokens = Math.ceil(
             (prompt.length + (options.systemPrompt?.length || 0)) / 4
         );
 
-        try {
-            if (model.provider === 'groq') {
-                const groq = this.getGroqClient(model.apiKeyEnv);
-                const stream = await groq.chat.completions.create({
+        for (let attempt = 0; attempt < modelChain.length; attempt++) {
+            const model = modelChain[attempt];
+            const startTime = Date.now();
+            let collectedText = '';
+            let lastError: unknown;
+
+            try {
+                yield* this.streamFromModel(model, prompt, options, (text) => { collectedText += text; });
+                // Success — trace and return
+                const estCompletionTokens = Math.ceil(collectedText.length / 4);
+                traceLLMCall(options.traceId, 'streamText', model.id, startTime, {
+                    text: collectedText,
+                    usage: { promptTokens: estPromptTokens, completionTokens: estCompletionTokens, totalTokens: estPromptTokens + estCompletionTokens },
                     model: model.id,
-                    messages: [
-                        ...(options.systemPrompt ? [{ role: 'system' as const, content: options.systemPrompt }] : []),
-                        { role: 'user' as const, content: prompt }
-                    ],
-                    temperature: options.temperature ?? 0.7,
-                    max_tokens: options.maxTokens,
-                    stream: true
                 });
+                return;
+            } catch (err) {
+                lastError = err;
+                const errMsg = err instanceof Error ? err.message : String(err);
+                console.warn(`[LLMRouter] streamText failed on ${model.id} (attempt ${attempt + 1}/${modelChain.length}): ${errMsg}`);
+                traceLLMCall(options.traceId, 'streamText', model.id, startTime, undefined, lastError);
 
-                for await (const chunk of stream) {
-                    const text = chunk.choices[0]?.delta?.content || '';
-                    if (text) {
-                        collectedText += text;
-                        yield text;
-                    }
+                if (attempt < modelChain.length - 1) {
+                    console.warn(`[LLMRouter] streamText falling back to ${modelChain[attempt + 1].id}`);
+                    continue;
                 }
+                throw new Error(`All models failed for streamText task: ${task}. Last error: ${errMsg}`);
+            }
+        }
+    }
 
-            } else if (model.provider === 'openrouter') {
-                const apiKey = this.getApiKey(model);
-                const body = {
+    private async *streamFromModel(
+        model: ModelConfig,
+        prompt: string,
+        options: GenerationOptions,
+        onToken: (text: string) => void
+    ): AsyncIterable<string> {
+        if (model.provider === 'groq') {
+            const groq = this.getGroqClient(model.apiKeyEnv);
+            const stream = await groq.chat.completions.create({
+                model: model.id,
+                messages: [
+                    ...(options.systemPrompt ? [{ role: 'system' as const, content: options.systemPrompt }] : []),
+                    { role: 'user' as const, content: prompt }
+                ],
+                temperature: options.temperature ?? 0.7,
+                max_tokens: options.maxTokens,
+                stream: true
+            });
+
+            for await (const chunk of stream) {
+                const text = chunk.choices[0]?.delta?.content || '';
+                if (text) { onToken(text); yield text; }
+            }
+
+        } else if (model.provider === 'openrouter') {
+            const apiKey = this.getApiKey(model);
+            const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`,
+                    'HTTP-Referer': 'http://localhost:3000',
+                    'X-Title': 'Scasi-AI'
+                },
+                body: JSON.stringify({
                     model: model.id,
                     messages: [
                         ...(options.systemPrompt ? [{ role: 'system', content: options.systemPrompt }] : []),
@@ -253,79 +292,41 @@ export class LLMRouter {
                     temperature: options.temperature ?? 0.7,
                     max_tokens: options.maxTokens,
                     stream: true
-                };
+                })
+            });
 
-                const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`,
-                        'HTTP-Referer': 'http://localhost:3000',
-                        'X-Title': 'Scasi-AI'
-                    },
-                    body: JSON.stringify(body)
-                });
+            if (!resp.ok) throw new Error(`OpenRouter Stream Error: ${resp.status}`);
+            if (!resp.body) throw new Error('No body returned from streaming API');
 
-                if (!resp.ok) {
-                    throw new Error(`OpenRouter Stream Error: ${resp.status}`);
-                }
+            const reader = resp.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let buffer = '';
 
-                if (!resp.body) throw new Error('No body returned from streaming API');
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
 
-                const reader = resp.body.getReader();
-                const decoder = new TextDecoder("utf-8");
-                let buffer = '';
+                buffer += decoder.decode(value, { stream: true });
+                let boundary = buffer.indexOf('\n');
 
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
+                while (boundary !== -1) {
+                    const line = buffer.slice(0, boundary).trim();
+                    buffer = buffer.slice(boundary + 1);
+                    boundary = buffer.indexOf('\n');
 
-                    buffer += decoder.decode(value, { stream: true });
-                    let boundary = buffer.indexOf('\n');
-
-                    while (boundary !== -1) {
-                        const line = buffer.slice(0, boundary).trim();
-                        buffer = buffer.slice(boundary + 1);
-                        boundary = buffer.indexOf('\n');
-
-                        if (line.startsWith('data: ')) {
-                            const dataStr = line.replace('data: ', '').trim();
-                            if (dataStr === '[DONE]') return;
-                            try {
-                                const data = JSON.parse(dataStr);
-                                const content = data.choices[0]?.delta?.content || '';
-                                if (content) {
-                                    collectedText += content;
-                                    yield content;
-                                }
-                            } catch {
-                                // Incomplete SSE chunk, skip
-                            }
+                    if (line.startsWith('data: ')) {
+                        const dataStr = line.slice(6).trim();
+                        if (dataStr === '[DONE]') return;
+                        try {
+                            const data = JSON.parse(dataStr);
+                            const content = data.choices[0]?.delta?.content || '';
+                            if (content) { onToken(content); yield content; }
+                        } catch {
+                            // Incomplete SSE chunk, skip
                         }
                     }
                 }
             }
-        } catch (err) {
-            lastError = err;
-            throw err;
-        } finally {
-            const estCompletionTokens = Math.ceil(collectedText.length / 4);
-            traceLLMCall(
-                options.traceId,
-                'streamText',
-                model.id,
-                startTime,
-                {
-                    text: collectedText,
-                    usage: {
-                        promptTokens: estPromptTokens,
-                        completionTokens: estCompletionTokens,
-                        totalTokens: estPromptTokens + estCompletionTokens,
-                    },
-                    model: model.id,
-                },
-                lastError
-            );
         }
     }
 

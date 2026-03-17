@@ -86,10 +86,13 @@ function buildInitialPrompt(
 
 const INTENT_SYSTEM = `You are an intent classifier for an AI email assistant called MailMind.
 Classify the user's request into one of these workflows:
-- handle_for_me: User wants AI to analyse, classify, summarize, and draft a reply for a specific email
+- handle_for_me: User EXPLICITLY asks to "handle this for me", "do everything", "take care of this", or "handle this email". Must be an explicit all-in-one delegation request.
 - sort_inbox: User wants to sort/prioritize/organize their inbox
 - reply_to: User wants to reply to a specific person (extract the person's name as "target")
-- general: Any other query (search, question, general help)
+- general: Everything else — including summarize, classify, explain, search, questions, reply drafts, or any single-task request
+
+IMPORTANT: "Summarize this email", "classify this", "draft a reply", "what does this email say" — these are ALL "general", NOT "handle_for_me".
+Only route to handle_for_me when the user explicitly says they want the full automated pipeline done for them.
 
 Return JSON: { "workflow": "...", "target": "optional person name", "reasoning": "..." }`;
 
@@ -202,7 +205,10 @@ export class OrchestratorAgent implements Agent<OrchestratorRequest, Orchestrato
         // 2. Dispatch to workflow or ReAct loop
         switch (intent.workflow) {
             case 'handle_for_me': {
-                yield { type: 'step', agentName: 'workflow.handleForMe', status: 'running' };
+                // Emit running events upfront so the UI shows all steps as pending/running
+                for (const stepName of ['nlp.classify', 'nlp.summarize', 'nlp.extractTasks', 'nlp.draftReply', 'orchestrator.followUp']) {
+                    yield { type: 'step', agentName: stepName, status: 'running' };
+                }
                 const result = await handleForMe(ctx, validated);
                 for (const t of result.trace) {
                     yield { type: 'step', agentName: t.agentName, status: 'completed', durationMs: t.durationMs, output: t.output };
