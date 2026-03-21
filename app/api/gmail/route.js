@@ -13,19 +13,28 @@ export async function GET(req) {
 
     const { searchParams } = new URL(req.url);
     const pageToken = searchParams.get("pageToken") || undefined;
+    const folder = searchParams.get("folder") || "inbox";
 
     const auth = new google.auth.OAuth2();
-    auth.setCredentials({
-      access_token: session.accessToken,
-    });
-
+    auth.setCredentials({ access_token: session.accessToken });
     const gmail = google.gmail({ version: "v1", auth });
 
-    // Step 1: Fetch Inbox Message IDs
+    // Build the query parameter
+    let q = "";
+    if (folder === "sent") q = "in:sent";
+    else if (folder === "drafts") q = "in:draft";
+    else if (folder === "trash") q = "in:trash";
+    else if (folder === "spam") q = "in:spam";
+    else if (folder === "archive") q = "-in:inbox -in:trash -in:spam";
+    else if (folder === "starred") q = "is:starred";
+    else q = "in:inbox";
+
+    // Step 1: Fetch Message IDs
     const listRes = await gmail.users.messages.list({
       userId: "me",
       maxResults: 20,
       pageToken,
+      q,
     });
 
     const messages = listRes.data.messages || [];
@@ -56,6 +65,9 @@ export async function GET(req) {
 
           // ✅ FIX 2: Snippet should never be undefined
           snippet: msg.data.snippet || "",
+
+          // ✅ FIX 3: Pass labelIds for Sidebar filtering
+          labelIds: msg.data.labelIds || [],
         };
       })
     );

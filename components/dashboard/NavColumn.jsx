@@ -91,6 +91,42 @@ export default function NavColumn({
             <hr style={{ border: "none", borderTop: "1px solid #E6EEF6", margin: "6px 0" }} />
 
             <div style={{ fontWeight: 800, color: "#0f172a", fontSize: 13, padding: "6px 6px" }}>
+                Apps
+            </div>
+            <button
+                onClick={() => window.location.href = '/calendar'}
+                style={{
+                    width: "100%", textAlign: "left", padding: "8px 12px", borderRadius: 10,
+                    display: "flex", alignItems: "center", gap: 12, border: "none", cursor: "pointer",
+                    background: "transparent", color: "#111827", fontWeight: 600, fontSize: 13
+                }}
+            >
+                <span style={{
+                    width: 28, height: 28, borderRadius: 8, display: "inline-flex",
+                    alignItems: "center", justifyContent: "center",
+                    background: "#EEF2FF", color: "#2563EB", fontWeight: 800, fontSize: 12
+                }}>📅</span>
+                <span>Calendar</span>
+            </button>
+            <button
+                onClick={() => window.location.href = '/team'}
+                style={{
+                    width: "100%", textAlign: "left", padding: "8px 12px", borderRadius: 10,
+                    display: "flex", alignItems: "center", gap: 12, border: "none", cursor: "pointer",
+                    background: "transparent", color: "#111827", fontWeight: 600, fontSize: 13
+                }}
+            >
+                <span style={{
+                    width: 28, height: 28, borderRadius: 8, display: "inline-flex",
+                    alignItems: "center", justifyContent: "center",
+                    background: "#EEF2FF", color: "#2563EB", fontWeight: 800, fontSize: 12
+                }}>👥</span>
+                <span>Team</span>
+            </button>
+
+            <hr style={{ border: "none", borderTop: "1px solid #E6EEF6", margin: "6px 0" }} />
+
+            <div style={{ fontWeight: 800, color: "#0f172a", fontSize: 13, padding: "6px 6px" }}>
                 Projects
             </div>
 

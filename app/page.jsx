@@ -2,8 +2,12 @@
 
 import { useEffect, useState, Fragment, useRef, useCallback } from "react";
 import { signOut, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import Footer from "@/components/Footer";
 import MailMindDashboard from "@/components/dashboard/MailMindDashboard";
+import CalendarView from "@/components/calendar/CalendarView";
+import TeamCollaboration from "@/components/team/TeamCollaboration";
+import EmailTeamPanel from "@/components/team/EmailTeamPanel";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "@/components/dashboard/Header";
@@ -295,6 +299,7 @@ function MailLoadingScreen({ onDone }) {
 
 export default function Home() {
   const { data: session } = useSession();
+  const router = useRouter();
 
   useEffect(() => {
     console.log("SESSION:", session);
@@ -350,6 +355,11 @@ export default function Home() {
   const [editableReply, setEditableReply] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
   const [replySent, setReplySent] = useState(false);
+
+  // Modals for AI Features
+  const [showBurnoutModal, setShowBurnoutModal] = useState(false);
+  const [showPriorityModal, setShowPriorityModal] = useState(false);
+  const [showSmartReplyModal, setShowSmartReplyModal] = useState(false);
 
   async function sendDraftReply() {
     if (!selectedMail || !handleForMeResult) return;
@@ -890,76 +900,64 @@ export default function Home() {
   }
 
   // ✅ FIX 4: Load emails when session is available
+  const fetchEmails = async (folder = activeFolder, token = null) => {
+    setLoading(true);
+    try {
+      const url = token ? `/api/gmail?pageToken=${token}&folder=${folder}` : `/api/gmail?folder=${folder}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      
+      const newMails = data.emails || [];
+      setEmails(prev => token ? [...prev, ...newMails] : newMails);
+      setNextPageToken(data.nextPageToken || null);
+      
+      const lastSeen = localStorage.getItem("lastSeenTime");
+      let count = 0;
+      let freshMails = [];
+      if (lastSeen) {
+        const lastTime = new Date(lastSeen).getTime();
+        freshMails = newMails.filter((mail) => new Date(mail.date).getTime() > lastTime);
+        count = freshMails.length;
+      }
+      setNewMails(freshMails);
+      setNewMailCount(count);
+
+      // Sync to Supabase
+      if (newMails.length) {
+        fetch("/api/db/emails", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ emails: newMails }),
+        }).catch(err => console.error(err));
+      }
+
+      // RAG async index
+      if (!ragIndexedRef.current && newMails.length) {
+        ragIndexedRef.current = true;
+        fetch("/api/actions/index-emails", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ maxEmails: 50 }),
+        }).catch(e => console.error(e));
+      }
+    } catch (error) {
+      console.error("❌ Error loading emails:", error);
+    }
+    setLoading(false);
+  };
+
   useEffect(() => {
     if (!session) return;
-    console.log("✅ Session found. Loading emails...");
-    const fetchEmails = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/gmail`);
-        const data = await res.json();
-        console.log("FIRST EMAIL:", data.emails[0]);
-        console.log("📧 Emails loaded:", data.emails?.length || 0);
-        setEmails(data.emails || []);
-        setNextPageToken(data.nextPageToken || null);
-        const lastSeen = localStorage.getItem("lastSeenTime");
-        let count = 0;
-        if (lastSeen) {
-          const lastTime = new Date(lastSeen).getTime();
-          count = (data.emails || []).filter((mail) => {
-            const mailTime = new Date(mail.date).getTime();
-            return mailTime > lastTime;
-          }).length;
-        }
-        setNewMailCount(count);
-        let freshMails = [];
-        if (lastSeen) {
-          const lastTime = new Date(lastSeen).getTime();
-          freshMails = (data.emails || []).filter((mail) => {
-            const mailTime = new Date(mail.date).getTime();
-            return mailTime > lastTime;
-          });
-        } else {
-          freshMails = [];
-        }
-        setNewMails(freshMails);
-        setNewMailCount(freshMails.length);
-
-        // Sync to Supabase (fire-and-forget)
-        if (data.emails?.length) {
-          fetch("/api/db/emails", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ emails: data.emails }),
-          }).catch(err => console.error("Failed to persist emails:", err));
-        }
-
-        // Trigger RAG indexing in background (once per session)
-        if (!ragIndexedRef.current && data.emails?.length) {
-          ragIndexedRef.current = true;
-          fetch("/api/actions/index-emails", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ maxEmails: 50 }),
-          })
-            .then(async (res) => {
-              const result = await res.json();
-              console.log(`✅ RAG indexed ${result.indexed || 0} emails (${result.failed || 0} failed)`);
-            })
-            .catch(err => console.error("RAG indexing failed:", err));
-        }
-      } catch (error) {
-        console.error("❌ Error loading emails:", error);
-      }
-      setLoading(false);
-    };
-    fetchEmails();
-  }, [session]);
+    console.log(`✅ Session found. Loading emails for ${activeFolder}...`);
+    setEmails([]);
+    setNextPageToken(null);
+    fetchEmails(activeFolder, null);
+  }, [session, activeFolder]);
 
   const refreshInbox = async () => {
     setEmails([]);
     setNextPageToken(null);
-    await loadEmails();
+    await fetchEmails(activeFolder, null);
   };
 
   function getEmailCategory(mail) {
@@ -1229,16 +1227,22 @@ export default function Home() {
 
   // ✅ FIX 3: Proper filtering with BOTH activeTab AND activeFolder
   const filteredEmails = emails.filter((mail) => {
+    // 1. Local-only folders (not stored as Gmail labels in this app)
     if (activeFolder === "starred") return starredIds.includes(mail.id);
     if (activeFolder === "snoozed") return snoozedIds.includes(mail.id);
     if (activeFolder === "done") return doneIds.includes(mail.id);
-    if (activeFolder === "drafts")
-      return mail.label?.includes("DRAFT");
+
+    // 2. Main Inbox hides snoozed and done
     if (activeFolder === "inbox") {
       if (snoozedIds.includes(mail.id)) return false;
       if (doneIds.includes(mail.id)) return false;
     }
-    // 🔍 SEARCH FILTER (ADD HERE)
+
+    // 3. For standard Gmail folders (drafts, sent, trash, spam, archive), 
+    // the backend /api/gmail?folder=... ALREADY returns exactly the right emails!
+    // So we don't need to filter them out locally.
+
+    // 🔍 SEARCH FILTER
     if (searchQuery.trim() !== "") {
       const query = searchQuery.toLowerCase();
       const subjectMatch = mail.subject?.toLowerCase().includes(query);
@@ -1248,6 +1252,7 @@ export default function Home() {
         return false;
       }
     }
+
     if (activeTab === "All Mails") return true;
     return getEmailCategory(mail) === activeTab;
   });
@@ -1423,13 +1428,22 @@ export default function Home() {
         </div>
 
         {/* search */}
-        <div className="srch">
-          <span className="srch-ic"><Ico.Search /></span>
-          <input
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search emails, contacts, AI actions…"
-          />
+        <div className="srch" style={{ display: 'flex', gap: '8px', maxWidth: '500px' }}>
+          <div style={{ position: 'relative', flex: 1 }}>
+            <span className="srch-ic"><Ico.Search /></span>
+            <input
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search emails, contacts, AI actions…"
+              style={{ width: '100%' }}
+            />
+          </div>
+          <button className="btn" onClick={() => { setAppView("inbox"); setActiveFolder("calendar"); }} style={{ flexShrink: 0, padding: "7px 14px", fontSize: 13, background: "#F5F3FF", borderColor: "#DDD6FE", fontWeight: 700, borderRadius: 8 }}>
+            📅 Calendar
+          </button>
+          <button className="btn" onClick={() => { setAppView("inbox"); setActiveFolder("team"); }} style={{ flexShrink: 0, padding: "7px 14px", fontSize: 13, background: "#F5F3FF", borderColor: "#DDD6FE", fontWeight: 700, borderRadius: 8 }}>
+            👥 Team
+          </button>
         </div>
 
         <div style={{ flex: 1 }} />
@@ -1541,6 +1555,10 @@ export default function Home() {
             </div>
           ))}
 
+          <div className="sb-lbl" style={{ marginTop: 5 }}>Workspace</div>
+          <div className={`sb-item${activeFolder === "calendar" ? " on" : ""}`} onClick={() => { setAppView("inbox"); setActiveFolder("calendar"); setSidebarOpen(false); }}><span style={{ fontSize: "14px", marginRight: "4px" }}>📅</span><span style={{ flex: 1 }}>Calendar</span></div>
+          <div className={`sb-item${activeFolder === "team" ? " on" : ""}`} onClick={() => { setAppView("inbox"); setActiveFolder("team"); setSidebarOpen(false); }}><span style={{ fontSize: "14px", marginRight: "4px" }}>👥</span><span style={{ flex: 1 }}>Team Collab</span></div>
+
           <div className="sb-lbl" style={{ marginTop: 5 }}>Categories</div>
           {categoryNav.map(cat => (
             <div
@@ -1554,9 +1572,9 @@ export default function Home() {
           ))}
 
           <div className="sb-lbl" style={{ marginTop: 5 }}>AI Features</div>
-          <div className="sb-item"><Ico.Zap /><span style={{ flex: 1 }}>Priority Scoring</span><span className="pulse" style={{ width: 5, height: 5, borderRadius: "50%", background: "#A78BFA", flexShrink: 0, display: "inline-block" }} /></div>
-          <div className="sb-item"><Ico.Sparkle /><span style={{ flex: 1 }}>Smart Reply</span><span className="pulse" style={{ width: 5, height: 5, borderRadius: "50%", background: "#A78BFA", flexShrink: 0, display: "inline-block" }} /></div>
-          <div className="sb-item"><Ico.Fire /><span style={{ flex: 1 }}>Burnout Score</span><span className="pulse" style={{ width: 5, height: 5, borderRadius: "50%", background: "#A78BFA", flexShrink: 0, display: "inline-block" }} /></div>
+          <div className="sb-item" onClick={() => setShowPriorityModal(true)}><Ico.Zap /><span style={{ flex: 1 }}>Priority Scoring</span><span className="pulse" style={{ width: 5, height: 5, borderRadius: "50%", background: "#A78BFA", flexShrink: 0, display: "inline-block" }} /></div>
+          <div className="sb-item" onClick={() => setShowSmartReplyModal(true)}><Ico.Sparkle /><span style={{ flex: 1 }}>Smart Reply</span><span className="pulse" style={{ width: 5, height: 5, borderRadius: "50%", background: "#A78BFA", flexShrink: 0, display: "inline-block" }} /></div>
+          <div className="sb-item" onClick={() => setShowBurnoutModal(true)}><Ico.Fire /><span style={{ flex: 1 }}>Burnout Score</span><span className="pulse" style={{ width: 5, height: 5, borderRadius: "50%", background: "#A78BFA", flexShrink: 0, display: "inline-block" }} /></div>
 
           <div style={{ flex: 1 }} />
           <div style={{ padding: "6px 8px 10px", borderTop: "1px solid rgba(196,181,253,.09)" }}>
@@ -1569,6 +1587,16 @@ export default function Home() {
         {/* ══ CENTRE: list + detail ══ */}
         <div style={{ flex: 1, display: "flex", overflow: "hidden", background: "#FAF8FF" }}>
 
+          {activeFolder === "calendar" ? (
+             <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
+               <CalendarView onEventClick={(evt) => { if(evt.emailId) setActiveFolder("inbox"); }} />
+             </div>
+          ) : activeFolder === "team" ? (
+             <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
+               <TeamCollaboration onEmailClick={(id) => setActiveFolder("inbox")} />
+             </div>
+          ) : (
+            <>
           {/* ════ EMAIL LIST ════ */}
           <div style={{
             width: 280, minWidth: 220, flexShrink: 0,
@@ -2069,6 +2097,12 @@ export default function Home() {
                     srcDoc={`<base target="_blank" />${selectedMail?.body || "<p style='font-family:sans-serif;color:#aaa;font-size:12px;padding:10px'>No content available</p>"}`}
                     style={{ width: "100%", height: 540, border: "1px solid #EDE9FE", borderRadius: 8, background: "#fff" }}
                   />
+                  
+                  {/* ── INLINE TEAM ASSIGNMENT & NOTES ── */}
+                  <EmailTeamPanel 
+                    emailId={selectedMail.id} 
+                    onAssigned={() => { setActiveFolder("team"); setAppView("inbox"); }} 
+                  />
                 </div>
 
                 {/* ── ATTACHMENTS ── */}
@@ -2146,6 +2180,8 @@ export default function Home() {
               </Fragment>
             )}
           </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -2167,6 +2203,65 @@ export default function Home() {
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════
+          AI FEATURE MODALS
+      ══════════════════════════════════════════════════ */}
+      {showBurnoutModal && (
+        <div className="overlay" onClick={() => setShowBurnoutModal(false)}>
+          <div className="modal anim" onClick={e => e.stopPropagation()}>
+            <div className="modal-ttl" style={{ display: "flex", alignItems: "center", gap: "8px" }}><Ico.Fire /> Burnout Score Report</div>
+            <div style={{ marginBottom: 15, fontSize: 13 }}>
+              Here is your AI-analyzed mental wellbeing score based on your inbox activity.
+            </div>
+            <div style={{ background: "#FAF8FF", padding: 15, borderRadius: 10, border: "1px solid #EDE9FE" }}>
+              <div style={{ marginBottom: 10 }}>
+                <span style={{ fontWeight: 600 }}>Stress Score:</span> {burnout.stressScore}/100
+              </div>
+              <div style={{ marginBottom: 10 }}>
+                <span style={{ fontWeight: 600 }}>Stress Level:</span> <span style={{ color: burnout.stressLevel === "High" ? "#DC2626" : burnout.stressLevel === "Medium" ? "#D97706" : "#059669" }}>{burnout.stressLevel}</span>
+              </div>
+              <div style={{ marginBottom: 10 }}>
+                <span style={{ fontWeight: 600 }}>Workload Trend:</span> {burnout.workloadTrend}
+              </div>
+              <div>
+                <span style={{ fontWeight: 600 }}>AI Recommendation:</span> {burnout.recommendation}
+              </div>
+            </div>
+            <button className="btn" onClick={() => setShowBurnoutModal(false)} style={{ marginTop: 15, width: "100%", justifyContent: "center" }}>
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showPriorityModal && (
+        <div className="overlay" onClick={() => setShowPriorityModal(false)}>
+          <div className="modal anim" onClick={e => e.stopPropagation()}>
+            <div className="modal-ttl" style={{ display: "flex", alignItems: "center", gap: "8px" }}><Ico.Zap /> Priority Scoring</div>
+            <div style={{ marginBottom: 15, fontSize: 13 }}>
+              Your emails have been scored based on urgency. See the red indicators on emails that require immediate attention. AI prioritization is actively running in the background.
+            </div>
+            <button className="btn pri" onClick={() => setShowPriorityModal(false)} style={{ width: "100%", justifyContent: "center" }}>
+              Got It
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showSmartReplyModal && (
+        <div className="overlay" onClick={() => setShowSmartReplyModal(false)}>
+          <div className="modal anim" onClick={e => e.stopPropagation()}>
+            <div className="modal-ttl" style={{ display: "flex", alignItems: "center", gap: "8px" }}><Ico.Sparkle /> Smart Reply</div>
+            <div style={{ marginBottom: 15, fontSize: 13 }}>
+              To use Smart Reply, please click on an email in your inbox to read it. Then click the <strong style={{ color: "#7C3AED" }}>"Generate AI Reply"</strong> button inside the email viewer to have AI draft a response for you.
+            </div>
+            <button className="btn" onClick={() => setShowSmartReplyModal(false)} style={{ width: "100%", justifyContent: "center" }}>
+              Close
+            </button>
           </div>
         </div>
       )}

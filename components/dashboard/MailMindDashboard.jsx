@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 function MailMindDashboard({ onNavigate, session, emailCount, loadingEmails, emails = [] }) {
+    const router = useRouter();
     const [showUserMenu, setShowUserMenu] = useState(false);
     const userName = session?.user?.name || "User";
     const userEmail = session?.user?.email || "";
@@ -393,6 +395,9 @@ grid-template-columns: 40% 60%;
                             </div>
                         </div>
                         <div className="mm-t-right">
+                            <button className="mm-ib" onClick={() => onNavigate('calendar')} data-mmtip="Calendar" style={{ padding: "0 8px", width: "auto", fontSize: "11px", fontWeight: "600" }}>📅 Calendar</button>
+                            <button className="mm-ib" onClick={() => onNavigate('team')} data-mmtip="Team" style={{ padding: "0 8px", width: "auto", fontSize: "11px", fontWeight: "600" }}>👥 Team</button>
+                            <div style={{ width: 1, height: 20, background: "var(--mm-border)", margin: "0 4px" }}></div>
                             <button className="mm-ib" data-mmtip="Refresh"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></svg></button>
                             <button className="mm-ib" data-mmtip="Focus Mode"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg></button>
                             <button className="mm-ib" data-mmtip="Weekly Analysis"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></svg></button>
@@ -510,6 +515,17 @@ grid-template-columns: 40% 60%;
                         <div className="mm-ni" onClick={() => onNavigate("trash")}>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /></svg>
                             Trash
+                        </div>
+
+                        <div className="mm-nd"></div>
+                        <span className="mm-ns">Workspace</span>
+                        <div className="mm-ni" onClick={() => onNavigate('calendar')} style={{ fontSize: "12.5px", fontWeight: "500", padding: "6px 10px 6px 13px" }}>
+                            <span style={{ fontSize: "14px", marginRight: "4px" }}>📅</span>
+                            Calendar
+                        </div>
+                        <div className="mm-ni" onClick={() => onNavigate('team')} style={{ fontSize: "12.5px", fontWeight: "500", padding: "6px 10px 6px 13px" }}>
+                            <span style={{ fontSize: "14px", marginRight: "4px" }}>👥</span>
+                            Team Collab
                         </div>
 
                         <div className="mm-nd"></div>
