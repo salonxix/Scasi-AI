@@ -1,6 +1,6 @@
 "use client";
 
-
+import { useState } from "react";
 
 export default function EmailCard({
     mail,
@@ -17,6 +17,28 @@ export default function EmailCard({
 }) {
     const score = getPriorityScore(mail);
     const category = getEmailCategory(mail);
+
+    const [handling, setHandling] = useState(false);
+    const [handleResult, setHandleResult] = useState(null);
+
+    async function handleForMe(e) {
+        e.stopPropagation();
+        setHandling(true);
+        setHandleResult(null);
+        try {
+            const res = await fetch("/api/ai/handle-for-me", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: mail.id, subject: mail.subject, from: mail.from, body: mail.snippet }),
+            });
+            const data = await res.json();
+            setHandleResult(data.result ?? data.message ?? "Done");
+        } catch {
+            setHandleResult("Failed to handle email.");
+        } finally {
+            setHandling(false);
+        }
+    }
 
     return (
         <div
@@ -157,6 +179,33 @@ export default function EmailCard({
                     {aiPriorityMap[mail.id].reason}
                 </p>
             )}
+
+            {/* Handle For Me */}
+            <div style={{ marginTop: 10 }} onClick={(e) => e.stopPropagation()}>
+                <button
+                    onClick={handleForMe}
+                    disabled={handling}
+                    style={{
+                        padding: "5px 12px",
+                        borderRadius: 8,
+                        border: "none",
+                        cursor: handling ? "not-allowed" : "pointer",
+                        background: handling
+                            ? "#9CA3AF"
+                            : "linear-gradient(135deg, #6D28D9, #2563EB)",
+                        color: "white",
+                        fontSize: 11,
+                        fontWeight: 700,
+                    }}
+                >
+                    {handling ? "Handling…" : "✨ Handle For Me"}
+                </button>
+                {handleResult && (
+                    <p style={{ fontSize: 11, color: "#059669", marginTop: 4, marginBottom: 0 }}>
+                        {handleResult}
+                    </p>
+                )}
+            </div>
         </div>
     );
 }

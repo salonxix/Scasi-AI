@@ -1,8 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
+import { useVoiceController } from "@/src/agents/voice/useVoiceController";
+import { WakeWordListener } from "@/src/agents/voice/wakeWordListener";
+
+const SessionOverlay = dynamic(() => import("@/components/voice/SessionOverlay"), { ssr: false });
+const MicButton = dynamic(() => import("@/components/voice/MicButton"), { ssr: false });
 
 function MailMindDashboard({ onNavigate, session, emailCount, loadingEmails, emails = [] }) {
     const router = useRouter();
@@ -11,6 +17,33 @@ function MailMindDashboard({ onNavigate, session, emailCount, loadingEmails, ema
     const userEmail = session?.user?.email || "";
     const userInitial = userName.charAt(0).toUpperCase();
     const inboxCount = typeof emailCount === "number" ? emailCount : 0;
+
+    // ── Voice assistant ──
+    const [voiceTranscript, setVoiceTranscript] = useState("");
+    const [voiceAnswer, setVoiceAnswer] = useState("");
+    const { state: voiceState, startSession, stopSession, isSupported: voiceSupported } = useVoiceController({
+        onTranscript: (text) => { setVoiceTranscript(text); },
+        onAnswer: (text) => { setVoiceAnswer(text); setVoiceTranscript(""); },
+        onStateChange: (s) => { if (s === "idle") { setVoiceTranscript(""); setVoiceAnswer(""); } },
+    });
+    const isVoiceActive = voiceState !== "idle";
+    const wakeListenerRef = useRef(null);
+    const startSessionRef = useRef(startSession);
+    useEffect(() => { startSessionRef.current = startSession; }, [startSession]);
+
+    useEffect(() => {
+        const listener = new WakeWordListener({ onDetected: () => startSessionRef.current() });
+        wakeListenerRef.current = listener;
+        listener.start();
+        return () => listener.stop();
+    }, []);
+
+    useEffect(() => {
+        const listener = wakeListenerRef.current;
+        if (!listener) return;
+        if (isVoiceActive) listener.pause();
+        else listener.resume();
+    }, [isVoiceActive]);
 
     // Compute real stats from emails
     const now = new Date();
@@ -395,6 +428,13 @@ grid-template-columns: 40% 60%;
                             </div>
                         </div>
                         <div className="mm-t-right">
+                            {MicButton && (
+                                <MicButton
+                                    state={voiceState}
+                                    onClick={isVoiceActive ? stopSession : startSession}
+                                    isSupported={voiceSupported.stt}
+                                />
+                            )}
                             <button className="mm-ib" onClick={() => onNavigate('calendar')} data-mmtip="Calendar" style={{ padding: "0 8px", width: "auto", fontSize: "11px", fontWeight: "600" }}>📅 Calendar</button>
                             <button className="mm-ib" onClick={() => onNavigate('team')} data-mmtip="Team" style={{ padding: "0 8px", width: "auto", fontSize: "11px", fontWeight: "600" }}>👥 Team</button>
                             <div style={{ width: 1, height: 20, background: "var(--mm-border)", margin: "0 4px" }}></div>
@@ -685,6 +725,15 @@ grid-template-columns: 40% 60%;
                     </aside>
                 </div>
             </div>
+            {SessionOverlay && (
+                <SessionOverlay
+                    state={voiceState}
+                    isVisible={isVoiceActive}
+                    onDismiss={stopSession}
+                    transcript={voiceTranscript}
+                    answer={voiceAnswer}
+                />
+            )}
         </>
     );
 }

@@ -13,6 +13,11 @@ import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "@/components/dashboard/Header";
 import GeminiSidebar from "@/components/GeminiSidebar";
+import { useVoiceController } from "@/src/agents/voice/useVoiceController";
+import { WakeWordListener } from "@/src/agents/voice/wakeWordListener";
+
+const SessionOverlay = dynamic(() => import("@/components/voice/SessionOverlay"), { ssr: false });
+const MicButton = dynamic(() => import("@/components/voice/MicButton"), { ssr: false });
 
 const ScassiHero3D = dynamic(
   () => import("@/components/ScassiHero3D"),
@@ -488,6 +493,26 @@ export default function Home() {
   });
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // ── VOICE ASSISTANT ──────────────────────────────────────────
+  const { state: voiceState, startSession, stopSession, isSupported: voiceSupported } = useVoiceController();
+  const isVoiceActive = voiceState !== "idle";
+  const wakeListenerRef = useRef(null);
+
+  useEffect(() => {
+    const listener = new WakeWordListener({ onDetected: () => { if (!isVoiceActive) startSession(); } });
+    listener.start();
+    wakeListenerRef.current = listener;
+    return () => listener.stop();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const listener = wakeListenerRef.current;
+    if (!listener) return;
+    if (isVoiceActive) listener.pause();
+    else listener.resume();
+  }, [isVoiceActive]);
 
   // ✅ Done Emails
   const [doneIds, setDoneIds] = useState(() => {
@@ -1449,6 +1474,13 @@ export default function Home() {
 
         <div style={{ flex: 1 }} />
 
+        {/* Scasi Voice */}
+        <MicButton
+          state={voiceState}
+          onClick={() => isVoiceActive ? stopSession() : startSession()}
+          isSupported={voiceSupported.stt}
+        />
+
         <button className="btn" onClick={refreshInbox}><Ico.Refresh /> Refresh</button>
 
         {/* notifications */}
@@ -1559,6 +1591,17 @@ export default function Home() {
           <div className="sb-lbl" style={{ marginTop: 5 }}>Workspace</div>
           <div className={`sb-item${activeFolder === "calendar" ? " on" : ""}`} onClick={() => { setAppView("inbox"); setActiveFolder("calendar"); setSidebarOpen(false); }}><span style={{ fontSize: "14px", marginRight: "4px" }}>📅</span><span style={{ flex: 1 }}>Calendar</span></div>
           <div className={`sb-item${activeFolder === "team" ? " on" : ""}`} onClick={() => { setAppView("inbox"); setActiveFolder("team"); setSidebarOpen(false); }}><span style={{ fontSize: "14px", marginRight: "4px" }}>👥</span><span style={{ flex: 1 }}>Team Collab</span></div>
+
+          {/* Scasi Voice button */}
+          <div
+            className="sb-item"
+            onClick={() => { isVoiceActive ? stopSession() : startSession(); setSidebarOpen(false); }}
+            style={{ color: isVoiceActive ? "#7C3AED" : undefined }}
+          >
+            <span style={{ fontSize: "14px", marginRight: "4px" }}>🎙️</span>
+            <span style={{ flex: 1 }}>Scasi Voice</span>
+            {isVoiceActive && <span className="pulse" style={{ width: 6, height: 6, borderRadius: "50%", background: "#7C3AED", flexShrink: 0, display: "inline-block" }} />}
+          </div>
 
           <div className="sb-lbl" style={{ marginTop: 5 }}>Categories</div>
           {categoryNav.map(cat => (
@@ -2285,6 +2328,8 @@ export default function Home() {
       )}
       {/* GLOBAL NOTIFICATION MANAGER */}
       <CalendarNotifier />
+      {/* SCASI VOICE SESSION OVERLAY */}
+      <SessionOverlay state={voiceState} isVisible={isVoiceActive} onDismiss={stopSession} />
     </>
   );
 }

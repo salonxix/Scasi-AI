@@ -1,6 +1,13 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { signOut } from "next-auth/react";
+import dynamic from "next/dynamic";
+import { useVoiceController } from "@/src/agents/voice/useVoiceController";
+import { WakeWordListener } from "@/src/agents/voice/wakeWordListener";
+
+const SessionOverlay = dynamic(() => import("@/components/voice/SessionOverlay"), { ssr: false });
+const MicButton = dynamic(() => import("@/components/voice/MicButton"), { ssr: false });
 
 export default function TopNavbar({
     searchQuery,
@@ -19,7 +26,37 @@ export default function TopNavbar({
     setAppView,
     setShowCompose,
 }) {
+    const { state: voiceState, startSession, stopSession, isSupported } = useVoiceController();
+    const isVoiceActive = voiceState !== "idle";
+
+    const wakeListenerRef = useRef(null);
+    useEffect(() => {
+        const listener = new WakeWordListener({
+            onDetected: () => {
+                if (!isVoiceActive) startSession();
+            },
+        });
+        listener.start();
+        wakeListenerRef.current = listener;
+        return () => listener.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Pause wake word detection while a session is active to avoid conflicts
+    useEffect(() => {
+        const listener = wakeListenerRef.current;
+        if (!listener) return;
+        if (isVoiceActive) listener.pause();
+        else listener.resume();
+    }, [isVoiceActive]);
+
+    const handleMicClick = () => {
+        if (isVoiceActive) stopSession();
+        else startSession();
+    };
+
     return (
+        <>
         <div className="topbar">
 
             {/* LEFT: Menu + Logo */}
@@ -54,6 +91,13 @@ export default function TopNavbar({
             </div>
 
             <div style={{ flex: 1 }} />
+
+            {/* Scasi Voice */}
+            <MicButton
+                state={voiceState}
+                onClick={handleMicClick}
+                isSupported={isSupported.stt}
+            />
 
             {/* Refresh */}
             <button className="btn" onClick={refreshInbox}>
@@ -188,5 +232,13 @@ export default function TopNavbar({
                 Logout
             </button>
         </div>
+
+        {/* Scasi Session Overlay — renders above all dashboard content */}
+        <SessionOverlay
+            state={voiceState}
+            isVisible={isVoiceActive}
+            onDismiss={stopSession}
+        />
+    </>
     );
 }

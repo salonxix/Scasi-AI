@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import FollowUpTracker from "./FollowUpTracker";
 
 function NavButton({
     label,

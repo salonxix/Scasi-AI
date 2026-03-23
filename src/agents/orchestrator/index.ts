@@ -97,7 +97,7 @@ Only route to handle_for_me when the user explicitly says they want the full aut
 Return JSON: { "workflow": "...", "target": "optional person name", "reasoning": "..." }`;
 
 function buildReActSystemPrompt(): string {
-    return `You are MailMind, an intelligent email assistant. You help users manage their email through AI-powered tools.
+    return `You are Scasi, a powerful and precise AI email assistant. You help users manage their Gmail inbox with confidence and accuracy.
 
 You have access to these tools:
 ${getToolDescriptionsForLLM()}
@@ -110,9 +110,12 @@ When you have enough information to answer, respond with:
 
 Rules:
 - Always think before acting
-- Use the minimum number of tool calls needed
-- Be concise and helpful in your final answer
-- Format your answer with markdown for readability`;
+- Use tools to fetch real inbox data before answering questions about emails
+- NEVER guess or make up email content — always use tools to get accurate data
+- Be direct, confident, and specific in your answers
+- When asked about inbox, unread count, or specific emails — use the search or list tools first
+- Format answers clearly with specific details (sender names, subjects, dates)
+- If you cannot find something, say so clearly rather than guessing`;
 }
 
 const ReActResponseSchema = z.object({
@@ -531,9 +534,12 @@ export class OrchestratorAgent implements Agent<OrchestratorRequest, Orchestrato
             : '\n\nNow provide your final answer to the user. Be concise, helpful, and use markdown for readability.';
         const finalPrompt = `${conversationContext}\n\nThought: ${lastThought}${answerHint}`;
         const finalSystemPrompt =
-            'You are MailMind, an intelligent email assistant. Based on the reasoning and observations above, ' +
-            'provide a clear and helpful response to the user. Use markdown formatting for readability. ' +
-            'Do NOT include any JSON, tool calls, or internal reasoning — just the user-facing answer.';
+            'You are Scasi, a powerful AI email assistant. Based on the reasoning and observations above, ' +
+            'provide a clear, direct, and accurate response to the user. ' +
+            'IMPORTANT: Your response will be spoken aloud via text-to-speech. ' +
+            'Use short, clear sentences. Do NOT use markdown, bullet points, asterisks, or special characters. ' +
+            'Speak naturally as if talking to the user. Be specific — include real names, subjects, and counts from the data. ' +
+            'Never guess or fabricate email details. If data is unavailable, say so clearly.';
 
         let collected = '';
         for await (const token of llmRouter.streamText('reply', finalPrompt, {

@@ -1,5 +1,8 @@
 "use client";
 
+import ErrorBoundary, { SkeletonBlock } from "./ErrorBoundary";
+import { Suspense } from "react";
+
 export default function Dashboard() {
     return (
         <div
@@ -44,59 +47,67 @@ export default function Dashboard() {
             </div>
 
             {/* BURNOUT CARD */}
-            <div
-                style={{
-                    background: "rgba(255,255,255,0.05)",
-                    border: "1px solid rgba(167,139,250,.2)",
-                    borderRadius: 16,
-                    padding: 24,
-                    marginBottom: 24,
-                }}
-            >
-                <h3
+            <ErrorBoundary label="Burnout Score">
+              <Suspense fallback={<SkeletonBlock height={120} />}>
+                <div
                     style={{
-                        fontSize: 16,
-                        fontWeight: 600,
-                        marginBottom: 16,
-                        color: "#edeaff",
+                        background: "rgba(255,255,255,0.05)",
+                        border: "1px solid rgba(167,139,250,.2)",
+                        borderRadius: 16,
+                        padding: 24,
+                        marginBottom: 24,
                     }}
                 >
-                    Burnout Score
-                </h3>
+                    <h3
+                        style={{
+                            fontSize: 16,
+                            fontWeight: 600,
+                            marginBottom: 16,
+                            color: "#edeaff",
+                        }}
+                    >
+                        Burnout Score
+                    </h3>
 
-                <div style={{ fontSize: 48, fontWeight: 700, color: "#a78bfa" }}>
-                    55
+                    <div style={{ fontSize: 48, fontWeight: 700, color: "#a78bfa" }}>
+                        55
+                    </div>
+
+                    <p style={{ color: "#b8b0da", marginTop: 8 }}>
+                        Medium Risk — High urgent load detected
+                    </p>
                 </div>
-
-                <p style={{ color: "#b8b0da", marginTop: 8 }}>
-                    Medium Risk — High urgent load detected
-                </p>
-            </div>
+              </Suspense>
+            </ErrorBoundary>
 
             {/* AI RECOMMENDATIONS */}
-            <div
-                style={{
-                    background: "rgba(255,255,255,0.05)",
-                    border: "1px solid rgba(167,139,250,.2)",
-                    borderRadius: 16,
-                    padding: 24,
-                }}
-            >
-                <h3
+            <ErrorBoundary label="AI Recommendations">
+              <Suspense fallback={<SkeletonBlock height={140} />}>
+                <div
                     style={{
-                        fontSize: 16,
-                        fontWeight: 600,
-                        marginBottom: 16,
-                        color: "#edeaff",
+                        background: "rgba(255,255,255,0.05)",
+                        border: "1px solid rgba(167,139,250,.2)",
+                        borderRadius: 16,
+                        padding: 24,
                     }}
                 >
-                    AI Recommendations
-                </h3>
+                    <h3
+                        style={{
+                            fontSize: 16,
+                            fontWeight: 600,
+                            marginBottom: 16,
+                            color: "#edeaff",
+                        }}
+                    >
+                        AI Recommendations
+                    </h3>
 
-                <Recommendation text="Set inbox boundaries after 9PM" />
-                <Recommendation text="Delegate promotional emails using rules" />
-                <Recommendation text="Use Focus Mode in mornings" />
-            </div>
+                    <Recommendation text="Set inbox boundaries after 9PM" />
+                    <Recommendation text="Delegate promotional emails using rules" />
+                    <Recommendation text="Use Focus Mode in mornings" />
+                </div>
+              </Suspense>
+            </ErrorBoundary>
         </div>
     );
 }
