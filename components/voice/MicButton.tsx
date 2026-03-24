@@ -1,24 +1,20 @@
 "use client";
 /**
  * @file components/voice/MicButton.tsx
- * Redesigned Scasi mic button — glowing orb with animated states.
- *
- * idle       → purple orb, static
- * listening  → blue orb, breathing pulse rings
- * processing → purple orb, rotating arc
- * speaking   → green orb, waveform bars
+ * Scasi mic button — glowing pill with animated states.
+ * Used both inline (dashboard/calendar/team headers) and as the global floating FAB.
  */
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import type { VoiceState } from "@/src/agents/voice/voiceTypes";
 
 interface MicButtonProps {
   state: VoiceState;
   onClick: () => void;
   isSupported: boolean;
+  /** When true renders as a floating action button (fixed bottom-right) */
+  floating?: boolean;
 }
-
-const BAR_HEIGHTS = [5, 10, 16, 10, 5];
 
 const STATE_COLOR: Record<VoiceState, string> = {
   idle:       "#7C3AED",
@@ -28,105 +24,118 @@ const STATE_COLOR: Record<VoiceState, string> = {
 };
 
 const STATE_GLOW: Record<VoiceState, string> = {
-  idle:       "rgba(124,58,237,0.35)",
-  listening:  "rgba(37,99,235,0.55)",
-  processing: "rgba(124,58,237,0.55)",
-  speaking:   "rgba(5,150,105,0.55)",
+  idle:       "rgba(124,58,237,0.4)",
+  listening:  "rgba(37,99,235,0.6)",
+  processing: "rgba(124,58,237,0.6)",
+  speaking:   "rgba(5,150,105,0.6)",
 };
 
 const STATE_LABEL: Record<VoiceState, string> = {
-  idle:       "Talk to Scasi",
+  idle:       "Ask Scasi",
   listening:  "Listening…",
   processing: "Thinking…",
   speaking:   "Speaking…",
 };
 
-export default function MicButton({ state, onClick, isSupported }: MicButtonProps) {
+const BAR_HEIGHTS = [4, 9, 14, 9, 4];
+
+export default function MicButton({ state, onClick, isSupported, floating = false }: MicButtonProps) {
   const isActive = state !== "idle";
-  const color = STATE_COLOR[state];
-  const glow  = STATE_GLOW[state];
+  const color    = STATE_COLOR[state];
+  const glow     = STATE_GLOW[state];
+  const label    = STATE_LABEL[state];
 
-  return (
-    <div style={{ position: "relative", display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-      <button
-        onClick={onClick}
-        disabled={!isSupported}
-        title={!isSupported ? "Voice not supported in this browser" : STATE_LABEL[state]}
-        style={{
-          position: "relative",
-          width: 40,
-          height: 40,
-          borderRadius: "50%",
-          border: "none",
-          background: isActive
-            ? `radial-gradient(circle at 38% 32%, ${color}dd, ${color}99)`
-            : `radial-gradient(circle at 38% 32%, ${color}55, ${color}22)`,
-          cursor: isSupported ? "pointer" : "not-allowed",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          outline: "none",
-          padding: 0,
-          boxShadow: isActive
-            ? `0 0 0 2px ${color}55, 0 0 20px 6px ${glow}`
-            : `0 0 0 1.5px ${color}44, 0 0 8px 2px ${glow}`,
-          transition: "box-shadow 0.3s, background 0.3s",
-        }}
-      >
-        {/* Breathing pulse rings — listening */}
-        {state === "listening" && (
-          <>
+  const btn = (
+    <motion.button
+      onClick={onClick}
+      disabled={!isSupported}
+      whileHover={isSupported ? { scale: 1.06 } : {}}
+      whileTap={isSupported ? { scale: 0.94 } : {}}
+      title={!isSupported ? "Voice not supported in this browser" : label}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        padding: floating ? "12px 20px" : "8px 14px",
+        borderRadius: 999,
+        border: `1.5px solid ${color}55`,
+        background: isActive
+          ? `linear-gradient(135deg, ${color}ee, ${color}aa)`
+          : `linear-gradient(135deg, ${color}22, ${color}11)`,
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+        cursor: isSupported ? "pointer" : "not-allowed",
+        outline: "none",
+        boxShadow: isActive
+          ? `0 0 0 2px ${color}44, 0 8px 32px ${glow}, 0 2px 8px rgba(0,0,0,0.2)`
+          : `0 0 0 1px ${color}33, 0 4px 16px ${glow}, 0 2px 6px rgba(0,0,0,0.12)`,
+        transition: "box-shadow 0.3s, background 0.3s, border-color 0.3s",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {/* Shimmer sweep on active */}
+      {isActive && (
+        <motion.div
+          animate={{ x: ["-100%", "200%"] }}
+          transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut", repeatDelay: 0.6 }}
+          style={{
+            position: "absolute", inset: 0,
+            background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent)",
+            pointerEvents: "none",
+          }}
+        />
+      )}
+
+      {/* Pulse rings — listening */}
+      {state === "listening" && (
+        <>
+          {[0, 1].map(i => (
             <motion.div
-              animate={{ scale: [1, 1.9, 1], opacity: [0.5, 0, 0.5] }}
-              transition={{ duration: 1.8, repeat: Infinity, ease: "easeOut" }}
+              key={i}
+              animate={{ scale: [1, 1.6, 1], opacity: [0.5, 0, 0.5] }}
+              transition={{ duration: 1.6, repeat: Infinity, ease: "easeOut", delay: i * 0.5 }}
               style={{
-                position: "absolute", inset: -7, borderRadius: "50%",
+                position: "absolute", inset: -6, borderRadius: 999,
                 border: `1.5px solid ${color}`, pointerEvents: "none",
               }}
             />
-            <motion.div
-              animate={{ scale: [1, 1.45, 1], opacity: [0.4, 0, 0.4] }}
-              transition={{ duration: 1.8, repeat: Infinity, ease: "easeOut", delay: 0.45 }}
-              style={{
-                position: "absolute", inset: -3, borderRadius: "50%",
-                border: `1.5px solid ${color}`, pointerEvents: "none",
-              }}
-            />
-          </>
-        )}
+          ))}
+        </>
+      )}
 
-        {/* Rotating arc — processing */}
-        {state === "processing" && (
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 0.85, repeat: Infinity, ease: "linear" }}
-            style={{
-              position: "absolute", inset: -4, borderRadius: "50%",
-              border: "2.5px solid transparent",
-              borderTopColor: color,
-              borderRightColor: color,
-              pointerEvents: "none",
-            }}
-          />
-        )}
+      {/* Rotating arc — processing */}
+      {state === "processing" && (
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 0.9, repeat: Infinity, ease: "linear" }}
+          style={{
+            position: "absolute", inset: -5, borderRadius: 999,
+            border: "2px solid transparent",
+            borderTopColor: color,
+            borderRightColor: color,
+            pointerEvents: "none",
+          }}
+        />
+      )}
 
-        {/* Waveform bars — speaking */}
+      {/* Icon area */}
+      <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", width: 18, height: 18 }}>
         {state === "speaking" ? (
           <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
             {BAR_HEIGHTS.map((h, i) => (
               <motion.div
                 key={i}
-                animate={{ scaleY: [1, 2.5, 1] }}
-                transition={{ duration: 0.5, repeat: Infinity, ease: "easeInOut", delay: i * 0.09 }}
-                style={{ width: 3, height: h, borderRadius: 2, background: "#fff", transformOrigin: "center" }}
+                animate={{ scaleY: [1, 2.4, 1] }}
+                transition={{ duration: 0.45, repeat: Infinity, ease: "easeInOut", delay: i * 0.08 }}
+                style={{ width: 2.5, height: h, borderRadius: 2, background: "#fff", transformOrigin: "center" }}
               />
             ))}
           </div>
         ) : (
-          /* Mic SVG icon */
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
             stroke={isActive ? "#fff" : (isSupported ? color : "#9CA3AF")}
-            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+            strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
           >
             <rect x="9" y="2" width="6" height="12" rx="3" />
             <path d="M5 10a7 7 0 0 0 14 0" />
@@ -134,38 +143,41 @@ export default function MicButton({ state, onClick, isSupported }: MicButtonProp
             <line x1="8" y1="22" x2="16" y2="22" />
           </svg>
         )}
-      </button>
+      </div>
 
-      {/* State label under button when active */}
-      {isActive && (
-        <motion.div
+      {/* Label */}
+      <AnimatePresence mode="wait">
+        <motion.span
           key={state}
-          initial={{ opacity: 0, y: -2 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, x: 4 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -4 }}
+          transition={{ duration: 0.18 }}
           style={{
-            fontSize: 9,
-            fontWeight: 700,
-            color,
-            letterSpacing: "0.06em",
-            textTransform: "uppercase",
+            fontSize: floating ? 13 : 11,
+            fontWeight: 600,
+            color: isActive ? "#fff" : (isSupported ? color : "#9CA3AF"),
+            letterSpacing: "0.02em",
             whiteSpace: "nowrap",
-            pointerEvents: "none",
+            fontFamily: "inherit",
           }}
         >
-          {STATE_LABEL[state]}
-        </motion.div>
-      )}
+          {label}
+        </motion.span>
+      </AnimatePresence>
+    </motion.button>
+  );
 
-      {/* Unsupported tooltip */}
-      {!isSupported && (
-        <div style={{
-          position: "absolute", top: "110%", left: "50%", transform: "translateX(-50%)",
-          background: "#1F2937", color: "#fff", fontSize: 10, padding: "4px 8px",
-          borderRadius: 6, whiteSpace: "nowrap", pointerEvents: "none", zIndex: 100,
-        }}>
-          Voice not supported in this browser
-        </div>
-      )}
+  if (!floating) return btn;
+
+  return (
+    <div style={{
+      position: "fixed",
+      bottom: 28,
+      right: 28,
+      zIndex: 9999,
+    }}>
+      {btn}
     </div>
   );
 }

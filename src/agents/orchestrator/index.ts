@@ -108,12 +108,19 @@ To use a tool, respond with JSON:
 When you have enough information to answer, respond with:
 { "thought": "your reasoning", "answer": "your final answer to the user" }
 
-Rules:
+MANDATORY INBOX RULES — follow these without exception:
+1. ANY question about emails, inbox, unread count, senders, subjects, or recent messages MUST start with a gmail.liveInbox tool call. Do NOT answer from memory.
+2. For unread count: call gmail.liveInbox with query "is:unread" FIRST.
+3. For recent emails: call gmail.liveInbox with query "in:inbox" FIRST.
+4. For emails from a specific person: call gmail.liveInbox with query "from:NAME" FIRST.
+5. For today's emails: call gmail.liveInbox with query "newer_than:1d" FIRST.
+6. NEVER guess, estimate, or fabricate email data — always call the tool.
+7. After getting tool results, answer with the EXACT data returned (real names, subjects, counts).
+8. If the tool returns an error or empty results, say so clearly.
+
+General rules:
 - Always think before acting
-- Use tools to fetch real inbox data before answering questions about emails
-- NEVER guess or make up email content — always use tools to get accurate data
 - Be direct, confident, and specific in your answers
-- When asked about inbox, unread count, or specific emails — use the search or list tools first
 - Format answers clearly with specific details (sender names, subjects, dates)
 - If you cannot find something, say so clearly rather than guessing`;
 }

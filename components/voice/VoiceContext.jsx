@@ -12,6 +12,7 @@ import { useVoiceController } from "@/src/agents/voice/useVoiceController";
 import { WakeWordListener } from "@/src/agents/voice/wakeWordListener";
 
 const SessionOverlay = dynamic(() => import("./SessionOverlay"), { ssr: false });
+const MicButton = dynamic(() => import("./MicButton"), { ssr: false });
 
 const VoiceContext = createContext(null);
 
@@ -63,6 +64,15 @@ export function VoiceProvider({ children }) {
   return (
     <VoiceContext.Provider value={{ voiceState, startSession, stopSession, isSupported, isVoiceActive }}>
       {children}
+      {/* Global floating mic button — visible on every page when authenticated */}
+      {status === "authenticated" && MicButton && !isVoiceActive && (
+        <MicButton
+          state={voiceState}
+          onClick={startSession}
+          isSupported={isSupported.stt}
+          floating
+        />
+      )}
       {/* Global session overlay — renders on top of every page */}
       {status === "authenticated" && SessionOverlay && (
         <SessionOverlay

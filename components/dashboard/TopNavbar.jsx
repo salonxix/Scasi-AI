@@ -2,12 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { signOut } from "next-auth/react";
-import dynamic from "next/dynamic";
-import { useVoiceController } from "@/src/agents/voice/useVoiceController";
-import { WakeWordListener } from "@/src/agents/voice/wakeWordListener";
-
-const SessionOverlay = dynamic(() => import("@/components/voice/SessionOverlay"), { ssr: false });
-const MicButton = dynamic(() => import("@/components/voice/MicButton"), { ssr: false });
 
 export default function TopNavbar({
     searchQuery,
@@ -29,46 +23,6 @@ export default function TopNavbar({
     const [voiceTranscript, setVoiceTranscript] = useState("");
     const [voiceAnswer, setVoiceAnswer] = useState("");
     const voiceSessionIdRef = useRef(null);
-
-    const { state: voiceState, startSession, stopSession, isSupported } = useVoiceController({
-        sessionId: voiceSessionIdRef.current,
-        onTranscript: (text) => setVoiceTranscript(text),
-        onAnswer: (text) => { setVoiceAnswer(text); setVoiceTranscript(""); },
-        onStateChange: (s) => { if (s === "idle") { setVoiceTranscript(""); setVoiceAnswer(""); voiceSessionIdRef.current = null; } },
-    });
-    const isVoiceActive = voiceState !== "idle";
-
-    const wakeListenerRef = useRef(null);
-    useEffect(() => {
-        const listener = new WakeWordListener({
-            onDetected: () => {
-                if (!isVoiceActive) startSession();
-            },
-        });
-        listener.start();
-        wakeListenerRef.current = listener;
-        return () => listener.stop();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    // Pause wake word detection while a session is active to avoid conflicts
-    useEffect(() => {
-        const listener = wakeListenerRef.current;
-        if (!listener) return;
-        if (isVoiceActive) listener.pause();
-        else listener.resume();
-    }, [isVoiceActive]);
-
-    const handleMicClick = () => {
-        if (isVoiceActive) {
-            stopSession();
-        } else {
-            voiceSessionIdRef.current = crypto.randomUUID();
-            setVoiceTranscript("");
-            setVoiceAnswer("");
-            startSession();
-        }
-    };
 
     return (
         <>
@@ -106,13 +60,6 @@ export default function TopNavbar({
             </div>
 
             <div style={{ flex: 1 }} />
-
-            {/* Scasi Voice */}
-            <MicButton
-                state={voiceState}
-                onClick={handleMicClick}
-                isSupported={isSupported.stt}
-            />
 
             {/* Refresh */}
             <button className="btn" onClick={refreshInbox}>
@@ -247,15 +194,5 @@ export default function TopNavbar({
                 Logout
             </button>
         </div>
-
-        {/* Scasi Session Overlay — renders above all dashboard content */}
-        <SessionOverlay
-            state={voiceState}
-            isVisible={isVoiceActive}
-            onDismiss={stopSession}
-            transcript={voiceTranscript}
-            answer={voiceAnswer}
-        />
-    </>
     );
 }

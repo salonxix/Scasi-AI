@@ -3,10 +3,7 @@
 import { useEffect, useState } from "react";
 import { signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import dynamic from "next/dynamic";
 import { useVoice } from "@/components/voice/VoiceContext";
-
-const MicButton = dynamic(() => import("@/components/voice/MicButton"), { ssr: false });
 
 function ScasiDashboard({ onNavigate, session, emailCount, loadingEmails, emails = [] }) {
     const router = useRouter();
@@ -402,13 +399,6 @@ grid-template-columns: 40% 60%;
                             </div>
                         </div>
                         <div className="mm-t-right">
-                            {MicButton && (
-                                <MicButton
-                                    state={voiceState}
-                                    onClick={isVoiceActive ? stopSession : startSession}
-                                    isSupported={voiceSupported.stt}
-                                />
-                            )}
                             <button className="mm-ib" onClick={() => onNavigate('calendar')} data-mmtip="Calendar" style={{ padding: "0 8px", width: "auto", fontSize: "11px", fontWeight: "600" }}>📅 Calendar</button>
                             <button className="mm-ib" onClick={() => onNavigate('team')} data-mmtip="Team" style={{ padding: "0 8px", width: "auto", fontSize: "11px", fontWeight: "600" }}>👥 Team</button>
                             <div style={{ width: 1, height: 20, background: "var(--mm-border)", margin: "0 4px" }}></div>
