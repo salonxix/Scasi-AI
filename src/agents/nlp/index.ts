@@ -43,7 +43,6 @@ import {
     type NlpResponse,
     NlpRequestSchema,
 } from './types';
-import { CLASSIFY_SYSTEM_V1, classifyUserPrompt } from './prompts/classify.v1';
 import { SUMMARIZE_SYSTEM_V1, summarizeUserPrompt } from './prompts/summarize.v1';
 import { REPLY_SYSTEM_V1, replyUserPrompt } from './prompts/reply.v1';
 import {
@@ -109,12 +108,12 @@ export class NlpAgent implements Agent<NlpRequest, NlpResponse> {
         }
 
         // Priority 2: Financial
-        if (match(['invoice', 'payment', 'billing', 'receipt', 'transaction', 'refund', 'overdue', 'amount due', 'bank', 'statement', 'payslip'])) {
+        if (match(['invoice', 'payment due', 'billing statement', 'receipt', 'bank transfer', 'bank account', 'transaction alert', 'refund', 'overdue', 'amount due', 'payslip', 'salary credit'])) {
             return { category: 'financial', confidence: 0.88, priority: 75, reason: 'Financial keywords detected' };
         }
 
-        // Priority 3: Action required / meetings
-        if (match(['action required', 'please review', 'your approval', 'kindly', 'can you', 'could you', 'please confirm', 'follow up'])) {
+        // Priority 3: Action required
+        if (match(['action required', 'please review', 'your approval', 'please confirm', 'follow up on', 'kindly assist', 'approval needed', 'your response is needed'])) {
             return { category: 'action_required', confidence: 0.85, priority: 70, reason: 'Action request detected' };
         }
 
@@ -124,7 +123,7 @@ export class NlpAgent implements Agent<NlpRequest, NlpResponse> {
         }
 
         // Priority 5: Social networks
-        if (match(['linkedin', 'twitter', 'instagram', 'facebook', 'github', 'mentioned you', 'connection request', 'follow', 'noreply@', 'notification'])) {
+        if (match(['linkedin', 'twitter', 'instagram', 'facebook', 'github notification', 'mentioned you', 'connection request', 'started following', 'noreply@', 'social notification'])) {
             return { category: 'social', confidence: 0.90, priority: 20, reason: 'Social network email detected' };
         }
 

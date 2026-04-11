@@ -5,7 +5,11 @@ export const runtime = 'nodejs';
 
 export async function POST(req) {
     try {
-        const { emails } = await req.json();
+        const body = await req.json().catch(() => ({}));
+        const { emails } = body;
+        if (!emails || typeof emails !== 'string' || emails.trim().length === 0) {
+            return NextResponse.json({ error: 'No email data provided' }, { status: 400 });
+        }
         
         const systemPrompt = `You are Scasi, the user's elite personal executive AI assistant creating their daily Morning Briefing.
 
