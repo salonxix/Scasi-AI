@@ -76,7 +76,7 @@ export async function POST(req: Request) {
     const isBackfill = url.searchParams.get('backfill') === 'true';
 
     const body = await req.json().catch(() => ({}));
-    const BACKFILL_MAX = 1500; // Gmail hard caps at 500/page; we paginate up to 3 pages
+    const BACKFILL_MAX = 3000; // Paginated: up to 6 pages of 500 from Gmail API
     const maxEmails = isBackfill ? BACKFILL_MAX : Math.min(
         (body as Record<string, number>).maxEmails ?? DEFAULT_MAX_EMAILS,
         100
