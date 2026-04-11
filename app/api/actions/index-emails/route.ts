@@ -76,7 +76,8 @@ export async function POST(req: Request) {
     const isBackfill = url.searchParams.get('backfill') === 'true';
 
     const body = await req.json().catch(() => ({}));
-    const maxEmails = isBackfill ? 3000 : Math.min(
+    const BACKFILL_MAX = 1500; // Gmail hard caps at 500/page; we paginate up to 3 pages
+    const maxEmails = isBackfill ? BACKFILL_MAX : Math.min(
         (body as Record<string, number>).maxEmails ?? DEFAULT_MAX_EMAILS,
         100
     );
@@ -88,19 +89,32 @@ export async function POST(req: Request) {
 
     const gmail = google.gmail({ version: 'v1', auth });
 
-    // Fetch message IDs
-    const listRes = await gmail.users.messages.list({
-        userId: 'me',
-        maxResults: maxEmails,
-    });
+    // Paginate through Gmail message IDs (max 500 per page from Gmail API)
+    const allMessageRefs: { id?: string | null; threadId?: string | null }[] = [];
+    let pageToken: string | undefined;
+    do {
+        const remaining = maxEmails - allMessageRefs.length;
+        if (remaining <= 0) break;
+        const listRes = await gmail.users.messages.list({
+            userId: 'me',
+            maxResults: Math.min(500, remaining),
+            ...(pageToken ? { pageToken } : {}),
+        });
+        const batch = listRes.data.messages || [];
+        allMessageRefs.push(...batch);
+        pageToken = listRes.data.nextPageToken ?? undefined;
+    } while (pageToken && allMessageRefs.length < maxEmails);
 
-    const messages = listRes.data.messages || [];
+    const messages = allMessageRefs;
     if (messages.length === 0) {
         return NextResponse.json({ indexed: 0, failed: 0, total: 0 });
     }
 
-    // Fetch full content for each email (10 concurrent)
+    // Fetch full content for each email.
+    // Backfill uses 'metadata' format (much faster, no body needed for analytics).
+    // Normal sync uses 'full' format to support RAG search.
     const validMessages = messages.filter(m => m.id);
+    const concurrency = isBackfill ? 5 : 10; // Lower concurrency for backfill to avoid Gmail rate limits
 
     const fetchResults = await pMap(
         validMessages,
@@ -109,7 +123,8 @@ export async function POST(req: Request) {
                 const msg = await gmail.users.messages.get({
                     userId: 'me',
                     id: m.id as string,
-                    format: 'full',
+                    format: isBackfill ? 'metadata' : 'full',
+                    ...(isBackfill ? { metadataHeaders: ['Subject', 'From', 'Date'] } : {}),
                 });
 
                 const headers = msg.data.payload?.headers || [];
@@ -122,14 +137,14 @@ export async function POST(req: Request) {
                     from: getHeader('From'),
                     date: safeISODate(getHeader('Date')) || new Date().toISOString(),
                     snippet: msg.data.snippet || '',
-                    body: extractBody(msg.data.payload as Record<string, unknown>),
+                    body: isBackfill ? '' : extractBody(msg.data.payload as Record<string, unknown>),
                 };
             } catch (err: unknown) {
                 console.error(`[index-emails] Failed to fetch message ${m.id}:`, err);
                 return null;
             }
         },
-        10
+        concurrency
     );
 
     const emails = fetchResults.filter(

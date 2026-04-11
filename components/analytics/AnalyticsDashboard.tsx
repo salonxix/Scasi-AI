@@ -79,11 +79,20 @@ export default function AnalyticsDashboard() {
   const [isDemoData, setIsDemoData] = useState(true);
   const [loading, setLoading] = useState(true);
   const [backfillLoading, setBackfillLoading] = useState(false);
+  const [backfillError, setBackfillError] = useState<string | null>(null);
+  const [backfillSuccess, setBackfillSuccess] = useState(false);
 
   const runDeepBackfill = async () => {
     setBackfillLoading(true);
+    setBackfillError(null);
+    setBackfillSuccess(false);
     try {
-      await fetch('/api/actions/index-emails?backfill=true', { method: 'POST' });
+      const syncRes = await fetch('/api/actions/index-emails?backfill=true', { method: 'POST' });
+      if (!syncRes.ok) {
+        const err = await syncRes.json().catch(() => ({}));
+        throw new Error(err.error || `Server error ${syncRes.status}`);
+      }
+      const syncData = await syncRes.json();
       // Refetch data
       const res = await fetch('/api/db/emails');
       if (res.ok) {
@@ -93,9 +102,13 @@ export default function AnalyticsDashboard() {
           setIsDemoData(false);
         }
       }
-    } catch(e) {
-      console.error(e);
-      alert('Backfill failed');
+      setBackfillSuccess(true);
+      setTimeout(() => setBackfillSuccess(false), 5000);
+      console.log(`[Backfill] Indexed ${syncData.indexed} / ${syncData.total} emails`);
+    } catch(e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Unknown error during backfill';
+      console.error('[Backfill]', msg);
+      setBackfillError(msg);
     }
     setBackfillLoading(false);
   };
@@ -277,6 +290,19 @@ export default function AnalyticsDashboard() {
             ))}
           </div>
         </div>
+
+        {/* Backfill status banners */}
+        {backfillError && (
+          <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-sm font-medium">
+            <span>⚠️ Backfill failed: {backfillError}</span>
+            <button onClick={() => setBackfillError(null)} className="text-red-400 hover:text-red-200 text-xs font-bold ml-4">✕ Dismiss</button>
+          </div>
+        )}
+        {backfillSuccess && (
+          <div className="flex items-center px-4 py-3 rounded-xl bg-green-500/10 border border-green-500/20 text-green-300 text-sm font-medium">
+            ✅ Backfill complete! Charts updated with your email history.
+          </div>
+        )}
 
         {/* Top Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

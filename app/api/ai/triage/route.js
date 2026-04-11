@@ -49,7 +49,9 @@ Output EXACTLY in this format (no extra sections):
                         }
                     }
                 } catch (err) {
-                    controller.enqueue(encoder.encode("\n\n❌ Stream failed"));
+                    const msg = err instanceof Error ? err.message : String(err);
+                    console.error('[triage] Stream error:', msg);
+                    controller.enqueue(encoder.encode(`\n\n__TRIAGE_ERROR__: ${msg}`));
                 } finally {
                     controller.close();
                 }

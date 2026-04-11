@@ -776,12 +776,19 @@ export default function Home() {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        collected += decoder.decode(value, { stream: true });
+        const chunk = decoder.decode(value, { stream: true });
+        collected += chunk;
+        // Detect structured error token from the backend
+        if (collected.includes('__TRIAGE_ERROR__')) {
+          const errMsg = collected.split('__TRIAGE_ERROR__:')[1]?.trim() || 'Unknown error';
+          setTriageResultBody(`❌ **Triage Failed**\n\nThe AI encountered an error: _${errMsg}_\n\nPlease try again.`);
+          break;
+        }
         setTriageResultBody(collected);
       }
     } catch (e) {
-      console.error(e);
-      setTriageResultBody("❌ Action Failed. Could not generate triage report.");
+      console.error('[triage] Client error:', e);
+      setTriageResultBody("❌ **Action Failed**\n\nCould not connect to the triage service. Check your connection and try again.");
     }
     setTriageStep(0);
     setTriageLoading(false);
