@@ -96,4 +96,13 @@ export const MODELS = {
         apiKeyEnv: 'GEMINI_API_KEY',
         contextWindow: 8192,
     },
+
+    // ── Embedding Model (LOCAL) ─────────────────────────────────────────
+    // Xenova/bge-base-en-v1.5: 768 dims (matches DB schema). 100% Free & Offline.
+    LOCAL_EMBED: {
+        id: 'Xenova/bge-base-en-v1.5',
+        provider: 'local' as ModelProvider,
+        apiKeyEnv: 'NONE',
+        contextWindow: 8192,
+    },
 } as const satisfies Record<string, ModelConfig>;

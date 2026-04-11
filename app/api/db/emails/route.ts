@@ -28,7 +28,7 @@ export async function GET() {
     .select("*")
     .eq("user_id", userId)
     .order("date", { ascending: false })
-    .limit(200);
+    .limit(5000);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ emails: data ?? [] });

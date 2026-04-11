@@ -9,6 +9,7 @@ import CalendarView from "@/components/calendar/CalendarView";
 import CalendarNotifier from "@/components/calendar/CalendarNotifier";
 import TeamCollaboration from "@/components/team/TeamCollaboration";
 import EmailTeamPanel from "@/components/team/EmailTeamPanel";
+import AnalyticsDashboard from "@/components/analytics/AnalyticsDashboard";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "@/components/dashboard/Header";
@@ -472,6 +473,9 @@ export default function Home() {
   const [aiPriorityMap, setAiPriorityMap] = useState({});
   const [handleForMeResult, setHandleForMeResult] = useState("");
   const [loadingHandleForMe, setLoadingHandleForMe] = useState(false);
+  const [triageLoading, setTriageLoading] = useState(false);
+  const [triageStep, setTriageStep] = useState(0); 
+  const [triageResultBody, setTriageResultBody] = useState(null);
   // ⭐ Starred Emails
   const [starredIds, setStarredIds] = useState(() => {
     if (typeof window === "undefined") return [];
@@ -713,12 +717,81 @@ export default function Home() {
           }
         }
       }
-      if (!collected) setHandleForMeResult("No response generated. Please try again.");
+      if (!collected) {
+        setHandleForMeResult("No response generated. Please try again.");
+      } else {
+        // Parse the markdown string into the beautiful Premium Insights UI!
+        const sumMatch = collected.match(/\*\*Summary:\*\*\s*([\s\S]+?)(?=\*\*|$)/);
+        const reasonMatch = collected.match(/\*\*Reason:\*\*\s*([\s\S]+?)(?=\*\*|$)/);
+        
+        let draftBody = collected;
+        const draftHeadingMatch = collected.match(/\*\*Draft Reply:\*\*\s*\n+([\s\S]+?)(?=\n{0,2}⚠️|$)/);
+        if (draftHeadingMatch) {
+          draftBody = draftHeadingMatch[1].trim();
+        } else {
+          const greetingMatch = collected.match(/(?:^|\n)((?:Dear|Hi|Hello|Good\s+\w+)[\s\S]+?)(?=\n{0,2}⚠️|$)/i);
+          if (greetingMatch) draftBody = greetingMatch[1].trim();
+        }
+        draftBody = draftBody
+          .replace(/⚠️[^\n]*/g, "")
+          .replace(/(Dear\s+.*?,|Hi\s+.*?,|Hello\s+.*?,|Greetings\s+.*?,)\s*/gi, "$1\n\n")
+          .replace(/\s*(Best regards,|Sincerely,|Thanks,|Warm regards,|Cheers,|Yours truly,)/gi, "\n\n$1\n")
+          .trim();
+
+        if (sumMatch) setAiSummary(sumMatch[1].trim());
+        if (reasonMatch) setAiReason(reasonMatch[1].trim());
+        setHandleForMeResult(draftBody);
+      }
     } catch (err) {
       console.error("Handle For Me error:", err);
       setHandleForMeResult("❌ Error: " + (err.message || "Network error"));
     }
     setLoadingHandleForMe(false);
+  }
+
+  async function runInboxTriage() {
+    setTriageLoading(true);
+    setTriageResultBody(null);
+    setTriageStep(1); // Scanning
+    try {
+      await new Promise(r => setTimeout(r, 600)); 
+      if (filteredEmails.length === 0) {
+        setTriageResultBody("🎉 **Inbox Zero!**\n\nYou're all caught up. No urgent tasks or replies needed.");
+        setTriageStep(0);
+        setTriageLoading(false);
+        return;
+      }
+      setTriageStep(2); // Identifying urgent
+      const emailsTarget = filteredEmails.slice(0, 15);
+      const combinedSnippets = emailsTarget.map(m => `Subject: ${m.subject}\nSnippet:${m.snippet}`).join("\n\n");
+      const res = await fetch("/api/ai/triage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emails: combinedSnippets.slice(0, 8000) })
+      });
+      setTriageStep(3); // Generating briefing
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let collected = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        collected += chunk;
+        // Detect structured error token from the backend
+        if (collected.includes('__TRIAGE_ERROR__')) {
+          const errMsg = collected.split('__TRIAGE_ERROR__:')[1]?.trim() || 'Unknown error';
+          setTriageResultBody(`❌ **Triage Failed**\n\nThe AI encountered an error: _${errMsg}_\n\nPlease try again.`);
+          break;
+        }
+        setTriageResultBody(collected);
+      }
+    } catch (e) {
+      console.error('[triage] Client error:', e);
+      setTriageResultBody("❌ **Action Failed**\n\nCould not connect to the triage service. Check your connection and try again.");
+    }
+    setTriageStep(0);
+    setTriageLoading(false);
   }
 
   async function generateReply() {
@@ -777,7 +850,7 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           subject: mail.subject,
-          snippet: emailContent,
+          snippet: emailContent.slice(0, 9500),
           from: mail.from,
           date: mail.date,
         }),
@@ -826,7 +899,7 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           subject: mail.subject || "",
-          snippet: mail.snippet || mail.body || "",
+          snippet: (mail.snippet || mail.body || "").slice(0, 9500),
           from: mail.from,
           date: mail.date,
         }),
@@ -1039,6 +1112,80 @@ export default function Home() {
     if (score >= 80) return "#DC2626";
     if (score >= 50) return "#D97706";
     return "#059669";
+  }
+
+  // ── SENTIMENT / TONE DETECTION ────────────────────────────────
+  function getToneInfo(mail) {
+    if (!mail) return { label: "Professional", icon: "⬡", color: "#4F46E5", bg: "#EEF2FF", msg: "Standard professional tone is appropriate." };
+    const text = ((mail.subject || "") + " " + (mail.snippet || "") + " " + (mail.body || "")).toLowerCase();
+    
+    if (text.includes("unacceptable") || text.includes("disappointed") || text.includes("complaint") || text.includes("frustrated") || text.includes("terrible") || text.includes("issue") || text.includes("fix this") || text.includes("fail") || text.includes("worst") || text.includes("refund")) {
+      return { label: "Frustrated", icon: "⚡", color: "#B91C1C", bg: "#FEF2F2", msg: "Consider delivering a careful, empathetic response." };
+    }
+    if (text.includes("urgent") || text.includes("asap") || text.includes("deadline") || text.includes("immediately") || text.includes("important") || text.includes("emergency")) {
+      return { label: "Urgent", icon: "◬", color: "#C2410C", bg: "#FFF7ED", msg: "Action required immediately to prevent delays." };
+    }
+    if (text.includes("thank you") || text.includes("thanks") || text.includes("great job") || text.includes("awesome") || text.includes("love") || text.includes("excited") || text.includes("cheers") || text.includes("happy") || text.includes("hope you're doing well") || text.includes("would be great")) {
+      return { label: "Friendly", icon: "✦", color: "#047857", bg: "#F0FDF4", msg: "Keep the interaction warm and approachable." };
+    }
+    return { label: "Professional", icon: "⬡", color: "#4338CA", bg: "#EEF2FF", msg: "Standard professional tone is appropriate." };
+  }
+
+  // ── PHISHING / SCAM DETECTION (FREE — rule-based, no LLM) ─────
+  function getPhishingInfo(mail) {
+    if (!mail) return { isPhishing: false, score: 0, reasons: [] };
+    const subject = (mail.subject || "").toLowerCase();
+    const snippet = (mail.snippet || "").toLowerCase();
+    const body    = (mail.body    || "").slice(0, 5000).toLowerCase(); // cap to avoid slow regex on large HTML
+    const from    = (mail.from    || "").toLowerCase();
+    const text = subject + " " + snippet + " " + body;
+
+    const reasons = [];
+    let score = 0;
+
+    // 1. Urgency pressure
+    if (/urgent|immediately|act now|respond within|expires in|limited time|last chance|final notice/.test(text)) {
+      reasons.push("Urgency pressure language detected"); score += 25;
+    }
+    // 2. Suspicious request patterns
+    if (/verify your (account|identity|email|password)|confirm your (details|info|credentials)|update your (billing|payment|account)|your account (has been|will be) (suspended|locked|terminated|deactivated)/.test(text)) {
+      reasons.push("Account verification/suspension threat"); score += 30;
+    }
+    // 3. Prize / lottery / winner
+    if (/you (have won|are selected|are a winner)|congratulations.{0,30}(win|prize|selected)|unclaim(ed)?\s+(reward|prize|gift)|lottery/.test(text)) {
+      reasons.push("Prize or lottery claim detected"); score += 35;
+    }
+    // 4. Suspicious link patterns in text
+    if (/click here to (verify|confirm|secure|update|activate)|login (here|now|immediately)|access (your|the) account/.test(text)) {
+      reasons.push("Suspicious call-to-action link"); score += 20;
+    }
+    // 5. Money transfer / advance-fee fraud
+    if (/(transfer|send|wire)\s+\$?[0-9,]+|unclaimed\s+(funds|money|inheritance)|million\s+(dollars|usd)|advance\s+fee/.test(text)) {
+      reasons.push("Money transfer or advance-fee fraud pattern"); score += 40;
+    }
+    // 6. Mismatched/unknown sender domain (generic free email for company)
+    const emailMatch = from.match(/<([^>]+)>/) || [null, from];
+    const senderEmail = emailMatch[1] || from;
+    if (/noreply@(?!google|microsoft|amazon|github|linkedin|twitter|paypal|apple)/i.test(senderEmail) &&
+        (subject.includes("security") || subject.includes("verify") || subject.includes("account"))) {
+      reasons.push("Unknown sender with security-related subject"); score += 20;
+    }
+    // 7. Credential harvesting keywords
+    if (/password\s+(reset|change|expired)|confirm\s+your\s+(pin|otp|code|password)|enter\s+(your|the)\s+(otp|pin|verification)/.test(text)) {
+      reasons.push("Credential harvesting attempt"); score += 30;
+    }
+    // 8. Generic greeting (sign of mass phishing)
+    if (/dear\s+(valued\s+)?(customer|user|client|member|account\s+holder)|hello\s+dear/.test(text)) {
+      reasons.push("Generic mass-phishing greeting"); score += 15;
+    }
+    // 9. Suspicious financial domain spoofing
+    if (/paypa1|g00gle|arnazon|micros0ft|app1e|faceb00k|netf1ix/.test(senderEmail + " " + text)) {
+      reasons.push("Lookalike domain spoofing detected"); score += 50;
+    }
+
+    const isPhishing = score >= 40;
+    const level = score >= 70 ? "high" : score >= 40 ? "medium" : "low";
+    return { isPhishing, score: Math.min(score, 100), reasons, level };
   }
 
   // ── DISTINCT CATEGORY COLOURS ─────────────────────────────────
@@ -1401,6 +1548,9 @@ export default function Home() {
         .anim { animation: sl .18s ease forwards; }
         @keyframes pu { 0%,100% { opacity:1; } 50% { opacity:.3; } }
         .pulse { animation: pu 2.2s infinite; }
+        @keyframes threat-glow { 0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.7), 0 2px 8px rgba(239,68,68,0.3); } 50% { box-shadow: 0 0 0 4px rgba(239,68,68,0), 0 2px 8px rgba(239,68,68,0.5); } }
+        @keyframes threat-shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
+        .threat-badge { animation: threat-glow 1.6s ease-in-out infinite; }
 
         /* ─ detail heading ─ */
         .d-hd { font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: #A78BFA; margin-bottom: 7px; }
@@ -1560,6 +1710,7 @@ export default function Home() {
           <div className="sb-lbl" style={{ marginTop: 5 }}>Workspace</div>
           <div className={`sb-item${activeFolder === "calendar" ? " on" : ""}`} onClick={() => { setAppView("inbox"); setActiveFolder("calendar"); setSidebarOpen(false); }}><span style={{ fontSize: "14px", marginRight: "4px" }}>📅</span><span style={{ flex: 1 }}>Calendar</span></div>
           <div className={`sb-item${activeFolder === "team" ? " on" : ""}`} onClick={() => { setAppView("inbox"); setActiveFolder("team"); setSidebarOpen(false); }}><span style={{ fontSize: "14px", marginRight: "4px" }}>👥</span><span style={{ flex: 1 }}>Team Collab</span></div>
+          <div className={`sb-item${activeFolder === "analytics" ? " on" : ""}`} onClick={() => { setAppView("inbox"); setActiveFolder("analytics"); setSidebarOpen(false); }}><span style={{ fontSize: "14px", marginRight: "4px" }}>📊</span><span style={{ flex: 1 }}>Analytics</span></div>
 
           <div className="sb-lbl" style={{ marginTop: 5 }}>Categories</div>
           {categoryNav.map(cat => (
@@ -1587,7 +1738,7 @@ export default function Home() {
         </div>
 
         {/* ══ CENTRE: list + detail ══ */}
-        <div style={{ flex: 1, display: "flex", overflow: "hidden", background: "#FAF8FF" }}>
+        <div style={{ flex: 1, display: "flex", overflow: "hidden", background: activeFolder === "analytics" ? "#1c1535" : "#FAF8FF" }}>
 
           {activeFolder === "calendar" ? (
              <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
@@ -1597,23 +1748,147 @@ export default function Home() {
              <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
                <TeamCollaboration onEmailClick={(id) => setActiveFolder("inbox")} />
              </div>
+          ) : activeFolder === "analytics" ? (
+             <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", background: "#1c1535" }}>
+               <AnalyticsDashboard />
+             </div>
           ) : (
             <>
           {/* ════ EMAIL LIST ════ */}
           <div style={{
-            width: 280, minWidth: 220, flexShrink: 0,
+            display: selectedMail ? "none" : "flex", flex: 1, flexShrink: 0,
             borderRight: "1px solid #EDE9FE",
-            display: "flex", flexDirection: "column",
+            flexDirection: "column",
             background: "#fff", overflow: "hidden",
           }}>
 
+            {/* ── ELITE TRIAGE BANNER ── */}
+            {activeFolder === "inbox" && (
+              <div style={{ 
+                position: "relative", padding: "26px 30px", flexShrink: 0, overflow: "hidden",
+                background: "linear-gradient(135deg, #0F172A 0%, #1E1B4B 100%)",
+                borderBottom: "1px solid #312E81",
+              }}>
+                {/* Decorative glowing orb effects in the background */}
+                <div style={{ position: "absolute", top: -50, right: -50, width: 150, height: 150, background: "#8B5CF6", borderRadius: "50%", filter: "blur(80px)", opacity: 0.3, pointerEvents: "none" }} />
+                <div style={{ position: "absolute", bottom: -50, left: 100, width: 200, height: 200, background: "#3B82F6", borderRadius: "50%", filter: "blur(90px)", opacity: 0.2, pointerEvents: "none" }} />
+
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", position: "relative", zIndex: 1 }}>
+                   <div>
+                     <div style={{ fontSize: 20, fontFamily: "'Syne', sans-serif", fontWeight: 800, letterSpacing: "-0.02em", display: "flex", gap: 10, alignItems: "center", color: "#F8FAFC", textShadow: "0 2px 10px rgba(0,0,0,0.5)" }}>
+                       <span style={{ color: "#A78BFA" }}><Ico.Sparkle /></span> Triage My Inbox
+                     </div>
+                     <div style={{ fontSize: 13, color: "#94A3B8", marginTop: 6, fontWeight: 500, letterSpacing: "0.01em" }}>
+                       Instantly batch analyze your unread queue and receive an elite Morning Briefing.
+                     </div>
+                   </div>
+                   <button 
+                     className="btn hover-glow" 
+                     onClick={runInboxTriage} 
+                     disabled={triageLoading} 
+                     style={{ 
+                       background: "linear-gradient(135deg, #6366F1, #8B5CF6)", 
+                       border: "1px solid rgba(255,255,255,0.1)", color: "#fff", 
+                       fontWeight: 800, padding: "12px 24px", borderRadius: 12,
+                       boxShadow: "0 4px 15px rgba(139, 92, 246, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
+                       transition: "all 0.3s ease", cursor: triageLoading ? "not-allowed" : "pointer",
+                       opacity: triageLoading ? 0.7 : 1, transform: triageLoading ? "scale(0.98)" : "scale(1)"
+                     }}
+                   >
+                     <Ico.Zap /> {triageLoading ? "Analyzing Inbox..." : "Run Executive Triage"}
+                   </button>
+                </div>
+
+                {/* Triage Output / Loading State */}
+                {(triageLoading || triageResultBody) && (
+                  <div className="anim" style={{ 
+                    position: "relative", zIndex: 1, marginTop: 22, 
+                    background: "rgba(15, 23, 42, 0.6)", borderRadius: 16, padding: "20px 24px", 
+                    border: "1px solid rgba(139, 92, 246, 0.2)", backdropFilter: "blur(12px)",
+                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05), 0 10px 30px rgba(0,0,0,0.2)"
+                  }}>
+                     {triageLoading && (
+                       <div style={{ display: "flex", gap: 14, marginBottom: triageResultBody ? 20 : 0, alignItems: "center" }}>
+                         <div style={{ position: "relative", width: 16, height: 16 }}>
+                           <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", borderRadius: "50%", background: "#8B5CF6", animation: "hfm-pulse 1s infinite" }} />
+                           <div style={{ position: "absolute", top: 3, left: 3, width: 10, height: 10, borderRadius: "50%", background: "#C4B5FD" }} />
+                         </div>
+                         <span style={{ fontSize: 13, fontWeight: 700, color: "#C4B5FD", letterSpacing: "0.02em" }}>
+                           {triageStep === 1 ? "Scanning incoming emails and metadata..." 
+                           : triageStep === 2 ? "Mapping urgent priorities and extracting deadlines..." 
+                           : "Compiling Executive Morning Briefing..."}
+                         </span>
+                       </div>
+                     )}
+                     
+                     {triageResultBody && (() => {
+                       const renderMarkdownLine = (line, i) => {
+                         // Render bold **text**
+                         const parseBold = (str) => {
+                           const parts = str.split(/\*\*(.+?)\*\*/g);
+                           return parts.map((p, j) => j % 2 === 1 ? <strong key={j} style={{ color: "#F8FAFC", fontWeight: 700 }}>{p}</strong> : p);
+                         };
+                         const parseItalic = (str) => {
+                           const parts = str.split(/\_(.+?)\_/g);
+                           return parts.map((p, j) => j % 2 === 1 ? <em key={j} style={{ color: "#94A3B8", fontWeight: 400 }}>{p}</em> : parseBold(p));
+                         };
+                         // Section headers (lines starting with emoji)
+                         if (/^[🎯⚠️📅💬]/.test(line)) {
+                           return <div key={i} style={{ fontWeight: 800, fontSize: 15, color: "#E2E8F0", marginTop: i === 0 ? 0 : 18, marginBottom: 6, fontFamily: "'Syne', sans-serif", letterSpacing: "-0.01em" }}>{parseItalic(line)}</div>;
+                         }
+                         // Arrow bullet points
+                         if (line.startsWith("→")) {
+                           return <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 5 }}>
+                             <span style={{ color: "#A78BFA", fontWeight: 700, flexShrink: 0, marginTop: 1 }}>→</span>
+                             <span style={{ fontSize: 13, color: "#CBD5E1", lineHeight: 1.6 }}>{parseItalic(line.replace(/^→\s*/, ""))}</span>
+                           </div>;
+                         }
+                         // Dash bullets
+                         if (line.startsWith("- ")) {
+                           return <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 4 }}>
+                             <span style={{ color: "#6366F1", flexShrink: 0 }}>•</span>
+                             <span style={{ fontSize: 13, color: "#CBD5E1", lineHeight: 1.6 }}>{parseItalic(line.replace(/^-\s*/, ""))}</span>
+                           </div>;
+                         }
+                         // Empty lines = spacer
+                         if (!line.trim()) return <div key={i} style={{ height: 4 }} />;
+                         // Default paragraph
+                         return <div key={i} style={{ fontSize: 13, color: "#94A3B8", lineHeight: 1.6, marginBottom: 3 }}>{parseItalic(line)}</div>;
+                       };
+                       return (
+                         <div style={{ fontFamily: "'Inter', sans-serif" }}>
+                           {triageResultBody.split("\n").map((line, i) => renderMarkdownLine(line, i))}
+                         </div>
+                       );
+                     })()}
+                     
+                     {!triageLoading && triageResultBody && (
+                        <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 16 }}>
+                           <button 
+                             className="btn" 
+                             onClick={() => setTriageResultBody(null)} 
+                             style={{ 
+                               background: "rgba(255,255,255,0.05)", color: "#94A3B8", 
+                               border: "1px solid rgba(255,255,255,0.1)", fontSize: 12,
+                               padding: "6px 14px", borderRadius: 8
+                             }}
+                            >
+                             Dismiss Briefing
+                           </button>
+                        </div>
+                     )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* list header */}
-            <div style={{ padding: "9px 12px 0", borderBottom: "1px solid #EDE9FE", background: "#fff" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 }}>
-                <span style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: 12.5, color: "#18103A", textTransform: "capitalize" }}>
+            <div style={{ padding: "16px 24px", borderBottom: "1px solid #E2E8F0", background: "#F8FAFC" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                <span style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 16, color: "#0F172A", textTransform: "capitalize", letterSpacing: "-0.01em" }}>
                   {activeFolder}
                 </span>
-                <span style={{ fontSize: 10, color: "#A78BFA", fontWeight: 600 }}>{filteredEmails.length} msgs</span>
+                <span style={{ fontSize: 11, color: "#64748B", fontWeight: 600, letterSpacing: "0.02em" }}>{filteredEmails.length} messages</span>
               </div>
               {/* category filter pills */}
               <div className="cat-strip" style={{ paddingLeft: 0, paddingRight: 0, marginBottom: 0 }}>
@@ -1622,12 +1897,12 @@ export default function Home() {
                     key={cat.key}
                     onClick={() => setActiveTab(cat.key)}
                     style={{
-                      padding: "2.5px 7px", borderRadius: 99, border: "none",
+                      padding: "4px 12px", borderRadius: 99, border: "none",
                       background: activeTab === cat.key ? cat.color : cat.bg,
                       color: activeTab === cat.key ? "#fff" : cat.color,
-                      fontWeight: 700, fontSize: 9.5, cursor: "pointer",
+                      fontWeight: 700, fontSize: 11, cursor: "pointer",
                       fontFamily: "'DM Sans',sans-serif", whiteSpace: "nowrap",
-                      transition: "all .13s", flexShrink: 0,
+                      transition: "all .15s ease", flexShrink: 0,
                     }}
                   >
                     {cat.key}
@@ -1637,9 +1912,9 @@ export default function Home() {
             </div>
 
             {/* email rows */}
-            <div style={{ flex: 1, overflowY: "auto" }}>
+            <div style={{ flex: 1, overflowY: "auto", background: "#fff" }}>
               {filteredEmails.length === 0 && (
-                <div style={{ padding: 20, textAlign: "center", color: "#C4B5FD", fontSize: 11.5 }}>
+                <div style={{ padding: 40, textAlign: "center", color: "#94A3B8", fontSize: 13, fontWeight: 500 }}>
                   No emails to display
                 </div>
               )}
@@ -1653,63 +1928,81 @@ export default function Home() {
                 const isSpam = isSpamEmail(mail);
                 const isNew = isFirstTimeSender(mail, emails);
                 const initials = getInitials(mail.from || "");
+                const catIcons = { "Do Now": "◈", "Needs Decision": "◨", "Waiting": "◴", "Low Energy": "⬚" };
+                const catIcon = catIcons[cat] || "❖";
+                const tone = getToneInfo(mail);
+                const phishing = getPhishingInfo(mail);
 
                 return (
                   <div
                     key={mail.id + "_" + index}
-                    className={`mail-row${isSelected ? " sel" : ""}`}
+                    className="mail-row"
                     onClick={() => {
                       openMailAndGenerateAI(mail.id, mail);
                       generateAIPriorityForMail(mail);
                     }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 16, padding: "12px 24px 12px 20px",
+                      borderBottom: "1px solid #F1F5F9", cursor: "pointer", 
+                      background: isNew ? "#F8FAFC" : "#FFFFFF",
+                      borderLeft: `4px solid ${scoreColor}`,
+                      transition: "background 0.2s ease"
+                    }}
+                    onMouseOver={e => (e.currentTarget.style.background = "#F1F5F9")}
+                    onMouseOut={e => (e.currentTarget.style.background = isNew ? "#F8FAFC" : "#FFFFFF")}
                   >
-                    {/* avatar */}
-                    <div style={{
-                      width: 26, height: 26, borderRadius: "50%",
-                      background: `${catColor}18`,
-                      border: `1.5px solid ${catColor}40`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      flexShrink: 0, fontSize: 8.5, fontWeight: 800, color: catColor,
-                      marginTop: 1,
-                    }}>
-                      {initials}
+                    {/* avatar + sender */}
+                    <div style={{ width: 220, flexShrink: 0, display: "flex", alignItems: "center", gap: 12, overflow: "hidden" }}>
+                      <div style={{
+                        width: 32, height: 32, borderRadius: "50%", background: `${catColor}12`, border: `1px solid ${catColor}20`,
+                        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 11, fontWeight: 800, color: catColor
+                      }}>
+                        {initials}
+                      </div>
+                      <span style={{ fontSize: 13, fontWeight: isNew ? 800 : 600, color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {mail.from?.split("<")[0]?.trim() || mail.from}
+                      </span>
                     </div>
 
-                    {/* text */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      {/* from + date */}
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 1.5 }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: "#18103A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "68%" }}>
-                          {mail.from?.split("<")[0]?.trim() || mail.from}
-                        </span>
-                        <span style={{ fontSize: 9.5, color: "#A78BFA", flexShrink: 0 }}>
-                          {mail.date ? new Date(mail.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}
-                        </span>
-                      </div>
-                      {/* subject */}
-                      <div style={{ fontSize: 11, fontWeight: 600, color: "#4C1D95", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 2 }}>
-                        {mail.subject}
-                      </div>
-                      {/* snippet */}
-                      <div style={{ fontSize: 10.5, color: "#6D28D9", opacity: .55, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 3.5 }}>
-                        {mail.snippet}
-                      </div>
-                      {/* tags + priority bar */}
-                      <div style={{ display: "flex", alignItems: "center", gap: 3, flexWrap: "nowrap" }}>
-                        <span className="pill" style={{ background: catBg, color: catColor }}>{cat}</span>
-                        {isSpam && <span className="pill" style={{ background: "#FEF2F2", color: "#DC2626" }}>Spam?</span>}
-                        {isNew && <span className="pill" style={{ background: "#EFF6FF", color: "#2563EB" }}>New</span>}
-                        {aiPriorityMap[mail.id] && (
-                          <span className="pill" style={{ background: "#F5F3FF", color: "#7C3AED" }}>
-                            AI·{aiPriorityMap[mail.id].priority}
-                          </span>
+                    {/* badges */}
+                    <div style={{ width: 230, flexShrink: 0, display: "flex", alignItems: "center", gap: 6 }}>
+                        {phishing.isPhishing ? (
+                          <span className="pill threat-badge" style={{
+                            background: "linear-gradient(90deg, #7F1D1D, #DC2626, #7F1D1D)",
+                            backgroundSize: "200% auto",
+                            animation: "threat-glow 1.6s ease-in-out infinite, threat-shimmer 3s linear infinite",
+                            color: "#FEF2F2", fontWeight: 800, border: "1px solid #EF444460",
+                            whiteSpace: "nowrap", padding: "4px 10px", fontSize: 10,
+                            letterSpacing: "0.04em", textTransform: "uppercase"
+                          }}>🚨 Phishing Risk</span>
+                        ) : isSpam ? (
+                          <span className="pill" style={{ background: "#FEF2F2", color: "#B91C1C", fontWeight: 700, border: "1px solid #B91C1C30", whiteSpace: "nowrap", padding: "4px 10px" }}>✕ Spam</span>
+                        ) : (
+                          <>
+                            <span className="pill" style={{ background: "transparent", color: catColor, whiteSpace: "nowrap", fontWeight: 600, border: `1px solid ${catColor}40`, padding: "4px 8px", fontSize: 10 }}>
+                              {catIcon} {cat}
+                            </span>
+                            <span className="pill" style={{ background: "transparent", color: tone.color, fontWeight: 600, border: `1px solid ${tone.color}40`, padding: "4px 8px", fontSize: 10 }}>
+                              {tone.icon} {tone.label}
+                            </span>
+                          </>
                         )}
-                        <div style={{ flex: 1, minWidth: 16 }}>
-                          <div className="pbar">
-                            <div className="pbar-fill" style={{ width: `${score}%`, background: scoreColor }} />
-                          </div>
-                        </div>
+                        {isNew && <span style={{ fontSize: 9, color: "#1D4ED8", background: "#EFF6FF", padding: "3px 6px", borderRadius: 4, fontWeight: 800, border: "none", letterSpacing: "0.04em" }}>NEW</span>}
+                    </div>
+
+                    {/* subject + snippet */}
+                    <div style={{ flex: 1, display: "flex", alignItems: "center", minWidth: 0, overflow: "hidden" }}>
+                      <div style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: 13, fontWeight: isNew ? 700 : 500, color: "#1E293B", marginRight: 8 }}>{mail.subject}</span>
+                        <span style={{ fontSize: 13, color: "#64748B", fontWeight: 400 }}>— {mail.snippet}</span>
                       </div>
+                    </div>
+
+                    {/* date */}
+                    <div style={{ width: 80, flexShrink: 0, textAlign: "right" }}>
+                      <span style={{ fontSize: 12, color: "#94A3B8", fontWeight: 500 }}>
+                        {mail.date ? new Date(mail.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}
+                      </span>
                     </div>
                   </div>
                 );
@@ -1736,44 +2029,199 @@ export default function Home() {
           </div>
 
           {/* ════ EMAIL DETAIL ════ */}
-          <div style={{ flex: 1, overflowY: "auto", background: "#FAF8FF", padding: "14px 18px" }}>
-            {!selectedMail ? (
-              <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, paddingBottom: 60 }}>
-                <EmptyStateEnvelope />
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: 14, color: "#18103A" }}>Select an email to read</div>
-                  <div style={{ fontSize: 11.5, color: "#A78BFA", marginTop: 3 }}>AI insights appear here automatically</div>
-                </div>
-              </div>
-            ) : (
+          {selectedMail && (
+            <div style={{ flex: 1, overflowY: "auto", background: "#FAF8FF", padding: "14px 18px", display: "flex", flexDirection: "column" }}>
+              <button 
+                onClick={() => setSelectedMail(null)}
+                style={{ 
+                  background: "#EDE9FE", border: "1px solid #DDD6FE", borderRadius: 8, padding: "8px 12px", 
+                  color: "#6D28D9", fontSize: 11.5, fontWeight: 700, cursor: "pointer", 
+                  display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 15, alignSelf: "flex-start",
+                  transition: "all 0.2s"
+                }}
+              >
+                ← Back to Inbox
+              </button>
               <Fragment>
 
+                {/* ── ELITE PHISHING ALERT BANNER ── */}
+                {(() => {
+                  const ph = getPhishingInfo(selectedMail);
+                  if (!ph.isPhishing) return null;
+                  const isHigh = ph.level === "high";
+                  // SVG circular gauge
+                  const radius = 28, circumference = 2 * Math.PI * radius;
+                  const dashOffset = circumference - (ph.score / 100) * circumference;
+                  const gaugeColor = isHigh ? "#EF4444" : "#F59E0B";
+                  return (
+                    <div className="anim" style={{
+                      position: "relative", overflow: "hidden",
+                      background: isHigh
+                        ? "linear-gradient(135deg, rgba(127,29,29,0.95) 0%, rgba(69,10,10,0.98) 100%)"
+                        : "linear-gradient(135deg, rgba(120,53,15,0.95) 0%, rgba(69,39,0,0.98) 100%)",
+                      border: `1px solid ${gaugeColor}35`,
+                      borderRadius: 16, padding: "20px 22px", marginBottom: 16,
+                      backdropFilter: "blur(16px)",
+                      boxShadow: isHigh
+                        ? `0 8px 32px rgba(239,68,68,0.25), inset 0 1px 0 rgba(255,255,255,0.08), 0 0 0 1px rgba(239,68,68,0.1)`
+                        : `0 8px 32px rgba(245,158,11,0.2), inset 0 1px 0 rgba(255,255,255,0.06)`
+                    }}>
+                      {/* Background shimmer stripe */}
+                      <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, background: "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.03) 50%, transparent 60%)", backgroundSize: "200% auto", animation: "threat-shimmer 4s linear infinite", pointerEvents: "none" }} />
+
+                      {/* Header row: icon + title + gauge */}
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                          {/* Pulsing icon */}
+                          <div style={{ position: "relative", width: 44, height: 44, flexShrink: 0 }}>
+                            <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: isHigh ? "rgba(239,68,68,0.2)" : "rgba(245,158,11,0.2)", animation: "threat-glow 1.6s ease-in-out infinite" }} />
+                            <div style={{ position: "absolute", inset: 6, borderRadius: "50%", background: isHigh ? "#DC2626" : "#D97706", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>
+                              {isHigh ? "🚨" : "⚠️"}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 900, fontSize: 16, color: "#FFF1F1", letterSpacing: "-0.01em", lineHeight: 1.2 }}>
+                              {isHigh ? "PHISHING ALERT" : "SUSPICIOUS EMAIL"}
+                            </div>
+                            <div style={{ fontSize: 11.5, color: isHigh ? "#FCA5A5" : "#FCD34D", marginTop: 4, fontWeight: 500 }}>
+                              Do not click links • Do not share credentials • Do not reply
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* SVG Risk Gauge */}
+                        <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                          <svg width={72} height={72} style={{ transform: "rotate(-90deg)" }}>
+                            <circle cx={36} cy={36} r={radius} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={6} />
+                            <circle cx={36} cy={36} r={radius} fill="none" stroke={gaugeColor} strokeWidth={6}
+                              strokeDasharray={circumference} strokeDashoffset={dashOffset}
+                              strokeLinecap="round"
+                              style={{ filter: `drop-shadow(0 0 6px ${gaugeColor})`, transition: "stroke-dashoffset 1s ease" }}
+                            />
+                            <text x={36} y={40} textAnchor="middle" style={{ transform: "rotate(90deg)", transformOrigin: "36px 36px" }}
+                              fill="#FFF" fontSize={14} fontWeight={900} fontFamily="'Syne',sans-serif">
+                              {ph.score}
+                            </text>
+                          </svg>
+                          <div style={{ fontSize: 9, color: "rgba(255,255,255,0.5)", letterSpacing: "0.06em", textTransform: "uppercase", marginTop: -6 }}>Risk Score</div>
+                        </div>
+                      </div>
+
+                      {/* Reason Chips */}
+                      {ph.reasons.length > 0 && (
+                        <div style={{ marginTop: 16, display: "flex", flexWrap: "wrap", gap: 7 }}>
+                          {ph.reasons.map((r, i) => (
+                            <span key={i} style={{
+                              fontSize: 11, fontWeight: 700,
+                              background: "rgba(0,0,0,0.3)",
+                              backdropFilter: "blur(8px)",
+                              color: isHigh ? "#FECACA" : "#FEF3C7",
+                              padding: "5px 11px", borderRadius: 8,
+                              border: `1px solid ${isHigh ? "rgba(239,68,68,0.25)" : "rgba(245,158,11,0.25)"}`,
+                              display: "flex", alignItems: "center", gap: 5
+                            }}>
+                              <span style={{ fontSize: 9 }}>⚑</span> {r}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* CTA row */}
+                      <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.07)", display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                        <button onClick={() => alert("Email flagged as safe for this session.")} style={{
+                          background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)",
+                          color: "rgba(255,255,255,0.65)", fontSize: 11.5, fontWeight: 700,
+                          padding: "7px 14px", borderRadius: 8, cursor: "pointer", letterSpacing: "0.02em"
+                        }}>
+                          ✓ Mark as Safe
+                        </button>
+                        <button onClick={() => alert("Reported as phishing. Thank you for keeping the community safe.")} style={{
+                          background: isHigh ? "#DC2626" : "#D97706",
+                          border: "none", color: "#fff",
+                          fontSize: 11.5, fontWeight: 800,
+                          padding: "7px 16px", borderRadius: 8, cursor: "pointer",
+                          boxShadow: `0 2px 10px ${isHigh ? "rgba(220,38,38,0.4)" : "rgba(217,119,6,0.4)"}`
+                        }}>
+                          🚩 Report Phishing
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* ── TONE BANNER ── */}
+                <div className="anim" style={{
+                  background: `linear-gradient(135deg, ${getToneInfo(selectedMail).bg}, #fff)`,
+                  border: `1px solid ${getToneInfo(selectedMail).color}40`,
+                  borderRadius: 9, padding: "8px 12px", marginBottom: 10,
+                  display: "flex", alignItems: "center", gap: 8,
+                  boxShadow: `0 4px 12px ${getToneInfo(selectedMail).color}15`
+                }}>
+                  <div style={{ fontSize: 16 }}>{getToneInfo(selectedMail).icon}</div>
+                  <div style={{ fontSize: 11.5, color: getToneInfo(selectedMail).color }}>
+                    <strong style={{ letterSpacing: "0.03em" }}>Tone: {getToneInfo(selectedMail).label}</strong> — <span>{getToneInfo(selectedMail).msg}</span>
+                  </div>
+                </div>
+
                 {/* ── EMAIL HEADER ── */}
-                <div className="card anim" style={{ marginBottom: 10 }}>
-                  <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: 13.5, color: "#18103A", lineHeight: 1.4, marginBottom: 7 }}>
+                <div style={{ marginBottom: 24, padding: "0 8px" }}>
+                  <h1 style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 24, color: "#0F172A", lineHeight: 1.3, marginBottom: 14 }}>
                     {selectedMail.subject}
+                  </h1>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #E2E8F0", paddingBottom: 16 }}>
+                    <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                      <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#F1F5F9", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, color: "#475569", fontSize: 14 }}>
+                        {getInitials(selectedMail.from || "")}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "#1E293B" }}>{selectedMail.from?.split("<")[0]?.trim() || selectedMail.from}</div>
+                        <div style={{ fontSize: 12, color: "#64748B", marginTop: 2 }}>{selectedMail.date}</div>
+                      </div>
+                    </div>
+                    {/* Minimal Quick Actions */}
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button className="btn" onClick={toggleStar} style={{ background: starredIds.includes(selectedMail.id) ? "#FEF3C7" : "#fff", padding: "8px 12px" }}><Ico.Star /></button>
+                      <button className="btn" onClick={deleteSelectedMail} style={{ padding: "8px 12px" }}><Ico.Trash /></button>
+                      <button className="btn" onClick={() => setShowGemini(true)} style={{ color: "#7C3AED", fontWeight: 700, background: "#F5F3FF", borderColor: "#EDE9FE", padding: "8px 14px" }}><Ico.Sparkle /> Ask AI</button>
+                    </div>
                   </div>
-                  <div style={{ display: "flex", gap: 14, fontSize: 11, color: "#A78BFA", marginBottom: 9, flexWrap: "wrap" }}>
-                    <span><strong style={{ color: "#4C1D95", fontWeight: 600 }}>From</strong>&ensp;{selectedMail.from}</span>
-                    <span><strong style={{ color: "#4C1D95", fontWeight: 600 }}>Date</strong>&ensp;{selectedMail.date}</span>
+                </div>
+
+                {/* ── FULL EMAIL CONTENT (MOVED UP FOR IMMEDIATE READING) ── */}
+                <div style={{ padding: "0 8px", marginBottom: 32 }}>
+                  <iframe
+                    srcDoc={`<base target="_blank" />${selectedMail?.body || "<p style='font-family:sans-serif;color:#64748B;line-height:1.6;font-size:14px;padding:10px'>No content available</p>"}`}
+                    style={{ width: "100%", height: 500, border: "none", background: "transparent" }}
+                  />
+                  {/* ── INLINE TEAM ASSIGNMENT & NOTES ── */}
+                  <div style={{ marginTop: 16 }}>
+                    <EmailTeamPanel emailId={selectedMail.id} onAssigned={() => { setActiveFolder("team"); setAppView("inbox"); }} />
                   </div>
-                  {/* quick actions */}
-                  <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                    <button
-                      className="btn amb"
-                      onClick={toggleStar}
-                      style={{ background: starredIds.includes(selectedMail.id) ? "#FEF3C7" : undefined, borderColor: starredIds.includes(selectedMail.id) ? "#FCD34D" : undefined }}
-                    >
-                      <Ico.Star /> {starredIds.includes(selectedMail.id) ? "Starred" : "Star"}
-                    </button>
-                    <button className="btn" onClick={snoozeMail}><Ico.Clock /> Snooze</button>
-                    <button className="btn grn" onClick={markDone}><Ico.Check /> Done</button>
-                    <button className="btn red" onClick={deleteSelectedMail}><Ico.Trash /> Delete</button>
-                    <button className="btn pri" onClick={() => setShowGemini(true)}><Ico.Sparkle /> Ask AI</button>
-                    <button className="ai-btn sm" onClick={() => runHandleForMe(selectedMail)} disabled={loadingHandleForMe}>
-                      <Ico.Zap /> {loadingHandleForMe ? "Processing…" : "Handle For Me"}
-                    </button>
-                  </div>
+                </div>
+
+                {/* ── SCASI AI COPILOT TOOLBAR ── */}
+                <div className="anim" style={{ 
+                  background: "#0F172A", borderRadius: 16, padding: "12px 16px", marginBottom: 24, 
+                  boxShadow: "0 12px 32px rgba(15,23,42,0.25)", display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", 
+                  position: "sticky", bottom: 20, zIndex: 10, border: "1px solid #1E293B"
+                }}>
+                   <div style={{ color: "#E2E8F0", fontWeight: 800, fontSize: 13, padding: "0 8px", display: "flex", alignItems: "center", gap: 8, letterSpacing: "0.02em" }}>
+                     <Ico.Sparkle /> SCASI COPILOT
+                   </div>
+                   <div style={{ width: 1, height: 24, background: "#334155", margin: "0 4px" }} />
+                   
+                   <button className="btn" onClick={() => runHandleForMe(selectedMail)} disabled={loadingHandleForMe} style={{ background: "linear-gradient(135deg, #A855F7, #7C3AED)", color: "#fff", border: "none", fontWeight: 700 }}>
+                     <Ico.Zap /> {loadingHandleForMe ? "Auto-Handling..." : "Auto-Handle"}
+                   </button>
+                   <button className="btn" onClick={() => generateSummary(selectedMail)} style={{ background: "#1E293B", color: "#F8FAFC", border: "1px solid #334155", fontWeight: 600 }}>
+                     📝 Summarize
+                   </button>
+                   <button className="btn" onClick={() => generateExplanation(selectedMail)} style={{ background: "#1E293B", color: "#F8FAFC", border: "1px solid #334155", fontWeight: 600 }}>
+                     🔍 Explain Priority
+                   </button>
+                   <button className="btn" onClick={generateReply} style={{ background: "#1E293B", color: "#F8FAFC", border: "1px solid #334155", fontWeight: 600 }}>
+                     ✍️ Smart Reply
+                   </button>
                 </div>
 
                 {/* ── DEADLINE ALERT ── */}
@@ -1793,23 +2241,28 @@ export default function Home() {
 
                 {/* ── HANDLE FOR ME RESULT ── */}
                 {(handleForMeResult || loadingHandleForMe) && (
-                  <div className="card-pu anim" style={{ marginBottom: 8 }}>
-                    <div className="card-ttl"><Ico.Zap /> Handle For Me — AI Analysis</div>
+                  <div className="anim" style={{ 
+                    background: "#FFF", borderRadius: 12, padding: "20px", marginBottom: 24, 
+                    border: "1px solid #E2E8F0", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)"
+                  }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#0F172A", marginBottom: 16, display: "flex", alignItems: "center", gap: 6, letterSpacing: "0.02em" }}>
+                      <Ico.Zap /> AUTO-HANDLE WORKFLOW
+                    </div>
 
                     {/* Step progress — shown while loading */}
                     {loadingHandleForMe && (
                       <div style={{
-                        background: "#F5F3FF", borderRadius: 10, padding: "12px 14px",
-                        border: "1px solid #DDD6FE", marginBottom: 8,
+                        background: "#F8FAFC", borderRadius: 10, padding: "16px",
+                        border: "1px solid #E2E8F0", marginBottom: 8,
                       }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: "#7C3AED", marginBottom: 10, letterSpacing: "0.04em" }}>
-                          ⚡ Processing your email…
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "#3B82F6", marginBottom: 12, letterSpacing: "0.04em" }}>
+                          ⚡ Processing your email context...
                         </div>
                         {[
-                          { label: "Classify", icon: "🏷️" },
-                          { label: "Summarize", icon: "📝" },
-                          { label: "Extract Tasks", icon: "✅" },
-                          { label: "Draft Reply", icon: "✍️" },
+                          { label: "Classify Sentiment", icon: "🏷️" },
+                          { label: "Generate Summary", icon: "📝" },
+                          { label: "Extract Action Items", icon: "✅" },
+                          { label: "Draft Deep Reply", icon: "✍️" },
                         ].map((step, i) => {
                           const progress = handleForMeResult.length;
                           const thresholds = [0, 80, 200, 400];
@@ -1817,40 +2270,40 @@ export default function Home() {
                           const isActive = progress >= thresholds[i] && !isDone;
                           return (
                             <div key={step.label} style={{
-                              display: "flex", alignItems: "center", gap: 10,
-                              padding: "7px 10px", borderRadius: 8, marginBottom: 5,
-                              background: isDone ? "#F0FDF4" : isActive ? "#EFF6FF" : "rgba(255,255,255,0.6)",
-                              border: `1px solid ${isDone ? "#BBF7D0" : isActive ? "#BFDBFE" : "#E5E7EB"}`,
+                              display: "flex", alignItems: "center", gap: 12,
+                              padding: "10px 14px", borderRadius: 8, marginBottom: 8,
+                              background: isDone ? "#F0FDF4" : isActive ? "#EFF6FF" : "#FFF",
+                              border: `1px solid ${isDone ? "#BBF7D0" : isActive ? "#BFDBFE" : "#E2E8F0"}`,
                               transition: "all 0.3s ease",
                             }}>
                               <div style={{
-                                width: 22, height: 22, borderRadius: "50%", flexShrink: 0,
+                                width: 24, height: 24, borderRadius: "50%", flexShrink: 0,
                                 display: "flex", alignItems: "center", justifyContent: "center",
-                                background: isDone ? "#16A34A" : isActive ? "#2563EB" : "#E5E7EB",
+                                background: isDone ? "#16A34A" : isActive ? "#3B82F6" : "#F1F5F9",
                               }}>
                                 {isDone
                                   ? <span style={{ color: "#fff", fontWeight: 900, fontSize: 12 }}>✓</span>
                                   : isActive
-                                    ? <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#fff", display: "block", animation: "hfm-pulse 1.2s ease-in-out infinite" }} />
-                                    : <span style={{ fontSize: 10, color: "#9CA3AF", fontWeight: 700 }}>{i + 1}</span>
+                                    ? <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#fff", display: "block", animation: "hfm-pulse 1.2s ease-in-out infinite" }} />
+                                    : <span style={{ fontSize: 10, color: "#94A3B8", fontWeight: 700 }}>{i + 1}</span>
                                 }
                               </div>
-                              <span style={{ fontSize: 12, fontWeight: 600, color: isDone ? "#16A34A" : isActive ? "#2563EB" : "#9CA3AF" }}>
+                              <span style={{ fontSize: 13, fontWeight: 600, color: isDone ? "#15803D" : isActive ? "#1D4ED8" : "#64748B" }}>
                                 {step.icon} {step.label}
                               </span>
-                              {isActive && <span style={{ marginLeft: "auto", fontSize: 10, color: "#93C5FD", fontStyle: "italic" }}>running…</span>}
-                              {isDone && <span style={{ marginLeft: "auto", fontSize: 10, color: "#86EFAC" }}>done</span>}
+                              {isActive && <span style={{ marginLeft: "auto", fontSize: 11, color: "#60A5FA", fontStyle: "italic" }}>Running...</span>}
+                              {isDone && <span style={{ marginLeft: "auto", fontSize: 11, color: "#4ADE80" }}>Done</span>}
                             </div>
                           );
                         })}
                         {handleForMeResult && (
                           <div style={{
-                            marginTop: 8, padding: "8px 10px", borderRadius: 7,
-                            background: "rgba(255,255,255,0.7)", border: "1px solid #DDD6FE",
-                            fontSize: 10.5, color: "#7C3AED", lineHeight: 1.6,
-                            maxHeight: 56, overflow: "hidden",
-                            maskImage: "linear-gradient(to bottom, black 50%, transparent 100%)",
-                            WebkitMaskImage: "linear-gradient(to bottom, black 50%, transparent 100%)",
+                            marginTop: 12, padding: "10px 12px", borderRadius: 8,
+                            background: "rgba(255,255,255,0.8)", border: "1px solid #CBD5E1",
+                            fontSize: 12, color: "#475569", lineHeight: 1.6,
+                            maxHeight: 60, overflow: "hidden",
+                            maskImage: "linear-gradient(to bottom, black 40%, transparent 100%)",
+                            WebkitMaskImage: "linear-gradient(to bottom, black 40%, transparent 100%)",
                           }}>
                             {handleForMeResult.slice(0, 200)}
                           </div>
@@ -1861,8 +2314,8 @@ export default function Home() {
                     {/* Editable reply — shown after loading completes */}
                     {handleForMeResult && !loadingHandleForMe && (
                       <>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: "#7C3AED", marginBottom: 6, display: "flex", alignItems: "center", gap: 5 }}>
-                          ✍️ Draft Reply <span style={{ fontWeight: 400, color: "#A78BFA", fontSize: 10 }}>(editable)</span>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "#475569", marginBottom: 8, display: "flex", alignItems: "center", gap: 5 }}>
+                          ✍️ Fully Drafted Reply <span style={{ fontWeight: 400, color: "#94A3B8", fontSize: 11 }}>(editable)</span>
                         </div>
                         <textarea
                           value={handleForMeResult}
@@ -1870,33 +2323,37 @@ export default function Home() {
                           rows={8}
                           style={{
                             width: "100%", boxSizing: "border-box",
-                            background: "#fff", borderRadius: 8, padding: "10px 12px",
-                            fontSize: 12, color: "#1e1b4b", lineHeight: 1.7,
-                            border: "1.5px solid #DDD6FE", resize: "vertical",
-                            fontFamily: "inherit", outline: "none",
+                            background: "#F8FAFC", borderRadius: 8, padding: "14px",
+                            fontSize: 13, color: "#1E293B", lineHeight: 1.7,
+                            border: "1px solid #CBD5E1", resize: "vertical",
+                            fontFamily: "inherit", outline: "none", marginBottom: 12
                           }}
-                          onFocus={e => e.target.style.borderColor = "#7C3AED"}
-                          onBlur={e => e.target.style.borderColor = "#DDD6FE"}
+                          onFocus={e => e.target.style.borderColor = "#94A3B8"}
+                          onBlur={e => e.target.style.borderColor = "#CBD5E1"}
                         />
-                        <div style={{ marginTop: 8, display: "flex", gap: 6, alignItems: "center" }}>
+                        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", alignItems: "center" }}>
                           {replySent ? (
-                            <span style={{ fontSize: 12, color: "#16A34A", fontWeight: 700, padding: "5px 0" }}>
+                            <span style={{ fontSize: 13, color: "#16A34A", fontWeight: 700, padding: "5px 0" }}>
                               ✅ Reply sent successfully
                             </span>
                           ) : (
                             <button
-                              className="ai-btn sm"
+                              className="btn"
                               onClick={sendDraftReply}
                               disabled={sendingReply}
-                              style={{ opacity: sendingReply ? 0.7 : 1 }}
+                              style={{ 
+                                background: "linear-gradient(135deg, #10B981, #059669)", 
+                                color: "#fff", border: "none", fontWeight: 700,
+                                opacity: sendingReply ? 0.7 : 1, padding: "10px 16px" 
+                              }}
                             >
-                              <Ico.Send /> {sendingReply ? "Sending…" : "Send Reply"}
+                              <Ico.Send /> {sendingReply ? "Sending..." : "Send AI Response"}
                             </button>
                           )}
                           <button
                             className="btn"
                             onClick={() => { setHandleForMeResult(""); setReplySent(false); }}
-                            style={{ fontSize: 11 }}
+                            style={{ background: "#F1F5F9", color: "#475569", border: "none" }}
                           >
                             Dismiss
                           </button>
@@ -1907,141 +2364,95 @@ export default function Home() {
                 )}
                 <style>{`@keyframes hfm-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.85)} }`}</style>
 
-                {/* ── AI SUMMARY + WHY IMPORTANT ── */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-                  <div className="card-pu anim">
-                    <div className="card-ttl"><Ico.Sparkle /> AI Summary</div>
-                    <button className="ai-btn sm" onClick={() => generateSummary(selectedMail)} style={{ marginBottom: 7 }}>
-                      Generate Summary
-                    </button>
-                    <div style={{
-                      background: "#fff", borderRadius: 7, padding: "8px 10px",
-                      fontSize: 11, color: "#4C1D95", lineHeight: 1.65,
-                      border: "1px solid #DDD6FE", minHeight: 48, whiteSpace: "pre-wrap",
-                    }}>
-                      {loadingAI
-                        ? <span style={{ color: "#A78BFA" }}>Generating…</span>
-                        : aiSummary || <span style={{ color: "#C4B5FD" }}>Click to generate</span>}
-                    </div>
-                  </div>
+                {/* ── PREMIUM INSIGHTS RENDER AREA ── */}
+                {(aiSummary || loadingAI || aiReason || aiReply || extractTasks(selectedMail?.snippet || selectedMail?.body || "").length > 0) && (
+                  <div className="anim" style={{ marginBottom: 24, padding: "0 8px" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                      
+                      {/* Left Column: Summary & Reason */}
+                      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                        {(aiSummary || loadingAI || aiReason) && (
+                          <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 12, padding: "16px 20px" }}>
+                            {loadingAI && <div style={{ fontSize: 13, color: "#64748B", fontStyle: "italic", animation: "pulse 2s infinite" }}>✨ Generating AI Insights...</div>}
+                            
+                            {aiSummary && (
+                              <div style={{ marginBottom: aiReason ? 16 : 0 }}>
+                                <div style={{ fontSize: 11, fontWeight: 800, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>AI Summary</div>
+                                <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{aiSummary}</div>
+                              </div>
+                            )}
+                            {aiReason && (
+                              <div>
+                                <div style={{ fontSize: 11, fontWeight: 800, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Priority Analysis</div>
+                                <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{aiReason}</div>
+                              </div>
+                            )}
+                          </div>
+                        )}
 
-                  <div className="card-pu anim">
-                    <div className="card-ttl"><Ico.Zap /> Why Important?</div>
-                    <button className="ai-btn sm" onClick={() => generateExplanation(selectedMail)} style={{ marginBottom: 7 }}>
-                      Explain Importance
-                    </button>
-                    <div style={{
-                      background: "#fff", borderRadius: 7, padding: "8px 10px",
-                      fontSize: 11, color: "#4C1D95", lineHeight: 1.65,
-                      border: "1px solid #DDD6FE", minHeight: 48, whiteSpace: "pre-wrap",
-                    }}>
-                      {aiReason || <span style={{ color: "#C4B5FD" }}>Click to explain</span>}
-                    </div>
-                  </div>
-                </div>
-
-                {/* ── TASKS + BURNOUT ── */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-                  {/* tasks */}
-                  <div className="card anim">
-                    <div className="card-ttl"><Ico.Check /> Tasks Extracted</div>
-                    {extractTasks(selectedMail?.snippet || selectedMail?.body || "").map((task, i) => (
-                      <div key={i} style={{
-                        display: "flex", alignItems: "flex-start", gap: 5,
-                        padding: "5px 7px", borderRadius: 6, background: "#F5F3FF",
-                        marginBottom: 4, fontSize: 11, color: "#4C1D95",
-                        border: "1px solid #EDE9FE",
-                      }}>
-                        <span style={{ color: "#7C3AED", marginTop: 1, flexShrink: 0 }}>◆</span>{task}
+                        {extractTasks(selectedMail?.snippet || selectedMail?.body || "").length > 0 && (
+                           <div style={{ background: "#FDF4FF", border: "1px solid #F5D0FE", borderRadius: 12, padding: "16px 20px" }}>
+                             <div style={{ fontSize: 11, fontWeight: 800, color: "#C026D3", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 10 }}><Ico.Check /> Extracted Tasks</div>
+                             {extractTasks(selectedMail?.snippet || selectedMail?.body || "").map((task, i) => (
+                               <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 8, fontSize: 13, color: "#701A75", lineHeight: 1.5 }}>
+                                 <div style={{ marginTop: 2, flexShrink: 0, width: 14, height: 14, borderRadius: 4, border: "1.5px solid #D946EF", background: "#FDF4FF" }} />
+                                 {task}
+                               </div>
+                             ))}
+                           </div>
+                        )}
                       </div>
-                    ))}
-                  </div>
 
-                  {/* burnout */}
-                  <div className="card anim">
-                    <div className="card-ttl"><Ico.Fire /> Burnout Dashboard</div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 7 }}>
-                      <div style={{
-                        width: 42, height: 42, borderRadius: "50%",
-                        background: `conic-gradient(${burnout.stressLevel === "High" ? "#DC2626" : burnout.stressLevel === "Medium" ? "#D97706" : "#059669"} ${burnout.stressScore * 3.6}deg, #EDE9FE 0deg)`,
-                        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                      }}>
-                        <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9.5, fontWeight: 800, color: "#18103A" }}>
-                          {burnout.stressScore}
-                        </div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 11.5, fontWeight: 700, color: "#18103A" }}>{burnout.stressLevel} Stress</div>
-                        <div style={{ fontSize: 10.5, color: "#A78BFA", marginTop: 1 }}>{burnout.workloadTrend}</div>
-                      </div>
-                    </div>
-                    <div style={{ fontSize: 11, color: "#4C1D95", padding: "6px 8px", background: "#F5F3FF", borderRadius: 6, lineHeight: 1.55, border: "1px solid #EDE9FE" }}>
-                      💡 {burnout.recommendation}
-                    </div>
-                  </div>
-                </div>
-
-                {/* ── AI REPLY GENERATOR ── */}
-                <div className="card anim" style={{ marginBottom: 8 }}>
-                  <div className="card-ttl"><Ico.Send /> AI Reply Generator</div>
-                  <button className="ai-btn" onClick={generateReply} style={{ marginBottom: aiReply ? 9 : 0 }}>
-                    <Ico.Sparkle /> {loadingReply ? "Generating…" : "Generate Reply"}
-                  </button>
-
-                  {aiReply && (
-                    <div className="anim">
-                      <div style={{
-                        background: "#F5F3FF", borderRadius: 7, padding: "8px 10px",
-                        fontSize: 11, color: "#4C1D95", lineHeight: 1.65,
-                        border: "1px solid #DDD6FE", marginBottom: 8, whiteSpace: "pre-wrap",
-                      }}>
-                        {aiReply}
-                      </div>
-                      <div style={{ border: "1px solid #EDE9FE", borderRadius: 8, padding: 10 }}>
-                        <div style={{ fontSize: 10.5, fontWeight: 700, color: "#4C1D95", marginBottom: 6 }}>Edit reply before sending</div>
-                        <textarea
-                          value={editableReply}
-                          onChange={e => setEditableReply(e.target.value)}
-                          rows={4}
-                          className="inp"
-                          style={{ resize: "vertical", marginBottom: 7 }}
-                        />
-                        <div style={{ display: "flex", gap: 6 }}>
-                          <button
-                            className="btn pri"
-                            onClick={() => { navigator.clipboard.writeText(editableReply); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-                            style={{ background: copied ? "#059669" : undefined, borderColor: copied ? "#059669" : undefined }}
-                          >
-                            <Ico.Copy /> {copied ? "Copied!" : "Copy"}
-                          </button>
-                          <button
-                            className="btn pri"
-                            onClick={async () => {
-                              if (!selectedMail) return alert("Select email first");
-                              const recipient = extractEmail(selectedMail.from);
-                              if (!recipient) { alert("❌ Cannot reply: No valid recipient email found"); return; }
-                              const res = await fetch("/api/gmail/reply", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
-                                  to: recipient,
-                                  subject: selectedMail.subject,
-                                  body: editableReply,
-                                  threadId: selectedMail.threadId,
-                                  originalMessageId: selectedMail.messageId,
-                                }),
-                              });
-                              const data = await res.json();
-                              alert(data.success ? "✅ Reply Sent Successfully!" : "❌ Error: " + data.error);
+                      {/* Right Column: AI Reply Generator */}
+                      {aiReply && (
+                        <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: 12, padding: "16px 20px", display: "flex", flexDirection: "column" }}>
+                          <div style={{ fontSize: 11, fontWeight: 800, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 10, display: "flex", gap: 6, alignItems: "center" }}>
+                            <Ico.Send /> Smart Reply Draft
+                          </div>
+                          <textarea
+                            value={editableReply}
+                            onChange={e => setEditableReply(e.target.value)}
+                            style={{ 
+                              flex: 1, width: "100%", background: "#F8FAFC", borderRadius: 8, padding: "14px", 
+                              border: "1px solid #CBD5E1", fontSize: 13, color: "#1E293B", lineHeight: 1.6, 
+                              resize: "none", outline: "none", minHeight: 180, fontFamily: "inherit", marginBottom: 12
                             }}
-                          >
-                            <Ico.Send /> Reply Now
-                          </button>
+                            onFocus={e => e.target.style.borderColor = "#94A3B8"}
+                            onBlur={e => e.target.style.borderColor = "#CBD5E1"}
+                          />
+                          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                            <button
+                              className="btn"
+                              onClick={() => { navigator.clipboard.writeText(editableReply); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+                              style={{ background: copied ? "#059669" : "#fff", color: copied ? "#fff" : "#475569", borderColor: copied ? "#059669" : "#CBD5E1" }}
+                            >
+                              <Ico.Copy /> {copied ? "Copied!" : "Copy Text"}
+                            </button>
+                            <button
+                              className="btn"
+                              onClick={async () => {
+                                if (!selectedMail) return alert("Select email first");
+                                const recipient = extractEmail(selectedMail.from);
+                                if (!recipient) { alert("❌ Cannot reply: No valid recipient email found"); return; }
+                                const res = await fetch("/api/gmail/reply", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ to: recipient, subject: selectedMail.subject, body: editableReply, threadId: selectedMail.threadId, originalMessageId: selectedMail.messageId }),
+                                });
+                                const data = await res.json();
+                                alert(data.success ? "✅ Reply Sent Successfully!" : "❌ Error: " + data.error);
+                              }}
+                              style={{ background: "#7C3AED", color: "#fff", border: "none", fontWeight: 700 }}
+                            >
+                              <Ico.Send /> Send Reply
+                            </button>
+                          </div>
                         </div>
-                      </div>
+                      )}
+
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
 
                 {/* ── LINK BUTTON ── */}
                 {extractFirstLink(selectedMail?.body || selectedMail?.snippet || "") && (
@@ -2092,20 +2503,7 @@ export default function Home() {
                   )}
                 </div>
 
-                {/* ── FULL EMAIL CONTENT ── */}
-                <div className="card anim" style={{ marginBottom: 8 }}>
-                  <div className="card-ttl"><Ico.File /> Full Email Content</div>
-                  <iframe
-                    srcDoc={`<base target="_blank" />${selectedMail?.body || "<p style='font-family:sans-serif;color:#aaa;font-size:12px;padding:10px'>No content available</p>"}`}
-                    style={{ width: "100%", height: 540, border: "1px solid #EDE9FE", borderRadius: 8, background: "#fff" }}
-                  />
-                  
-                  {/* ── INLINE TEAM ASSIGNMENT & NOTES ── */}
-                  <EmailTeamPanel 
-                    emailId={selectedMail.id} 
-                    onAssigned={() => { setActiveFolder("team"); setAppView("inbox"); }} 
-                  />
-                </div>
+                {/* (Email Content has been moved above the Copilot Toolbar for optimal reading UX) */}
 
                 {/* ── ATTACHMENTS ── */}
                 {selectedMail?.attachments?.length > 0 && (
@@ -2180,8 +2578,8 @@ export default function Home() {
                 )}
 
               </Fragment>
-            )}
-          </div>
+            </div>
+          )}
             </>
           )}
         </div>

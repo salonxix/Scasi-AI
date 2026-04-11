@@ -81,24 +81,28 @@ export class RagAgent implements Agent<RagRequest, RagResponse> {
                 await updateIngestStatus(emailId, 'ingested');
 
                 // 4. Embed all chunk texts (graceful — skips if provider unavailable)
-                const chunkTexts = chunks.map(c => c.chunkText);
-                const embeddings = await embedTexts(chunkTexts, traceId);
+                if (!validated.skipEmbedding) {
+                    const chunkTexts = chunks.map(c => c.chunkText);
+                    const embeddings = await embedTexts(chunkTexts, traceId);
 
-                // 5. Update chunks with embeddings (only for non-null results)
-                const embeddingMap = new Map<number, number[]>();
-                chunks.forEach((c, i) => {
-                    const emb = embeddings[i];
-                    if (emb && emb.length > 0) {
-                        embeddingMap.set(c.chunkIndex, emb);
+                    // 5. Update chunks with embeddings (only for non-null results)
+                    const embeddingMap = new Map<number, number[]>();
+                    chunks.forEach((c, i) => {
+                        const emb = embeddings[i];
+                        if (emb && emb.length > 0) {
+                            embeddingMap.set(c.chunkIndex, emb);
+                        }
+                    });
+
+                    if (embeddingMap.size > 0) {
+                        await updateChunkEmbeddings(emailId, embeddingMap);
+                        await updateIngestStatus(emailId, 'indexed');
+                    } else {
+                        // Chunks stored but no embeddings — FTS search still works
+                        console.warn(`[RagAgent] Email ${email.gmailId} ingested without embeddings (FTS only)`);
                     }
-                });
-
-                if (embeddingMap.size > 0) {
-                    await updateChunkEmbeddings(emailId, embeddingMap);
-                    await updateIngestStatus(emailId, 'indexed');
                 } else {
-                    // Chunks stored but no embeddings — FTS search still works
-                    console.warn(`[RagAgent] Email ${email.gmailId} ingested without embeddings (FTS only)`);
+                    console.log(`[RagAgent] Fast-indexing email ${email.gmailId} without vectors (Backfill)`);
                 }
 
                 indexed++;

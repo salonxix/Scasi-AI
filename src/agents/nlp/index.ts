@@ -43,7 +43,6 @@ import {
     type NlpResponse,
     NlpRequestSchema,
 } from './types';
-import { CLASSIFY_SYSTEM_V1, classifyUserPrompt } from './prompts/classify.v1';
 import { SUMMARIZE_SYSTEM_V1, summarizeUserPrompt } from './prompts/summarize.v1';
 import { REPLY_SYSTEM_V1, replyUserPrompt } from './prompts/reply.v1';
 import {
@@ -96,17 +95,60 @@ export class NlpAgent implements Agent<NlpRequest, NlpResponse> {
     // classify
     // -----------------------------------------------------------------------
 
-    async classify(input: ClassifyInput, traceId?: string): Promise<ClassifyOutput> {
+    async classify(input: ClassifyInput, _traceId?: string): Promise<ClassifyOutput> {
         const validated = ClassifyInputSchema.parse(input);
-        const result = await llmRouter.generateText<ClassifyOutput>('classify', classifyUserPrompt(validated), {
-            schema: ClassifyOutputSchema,
-            systemPrompt: CLASSIFY_SYSTEM_V1,
-            traceId,
-            temperature: 0.3,
-            maxTokens: 256,
-        });
-        if (!result.data) throw new ScasiError({ code: 'NLP_PARSE_ERROR', message: 'No structured data returned for classify' });
-        return result.data;
+        const text = `${validated.subject} ${validated.snippet} ${validated.from ?? ''}`.toLowerCase();
+
+        // ── Keyword rule engine (free, no API) ──────────────────────────────
+        const match = (keywords: string[]) => keywords.some(k => text.includes(k));
+
+        // Priority 1: Urgent signals
+        if (match(['urgent', 'asap', 'immediately', 'action required', 'critical', 'emergency', 'respond now'])) {
+            return { category: 'urgent', confidence: 0.92, priority: 90, reason: 'Urgent keywords detected' };
+        }
+
+        // Priority 2: Financial
+        if (match(['invoice', 'payment due', 'billing statement', 'receipt', 'bank transfer', 'bank account', 'transaction alert', 'refund', 'overdue', 'amount due', 'payslip', 'salary credit'])) {
+            return { category: 'financial', confidence: 0.88, priority: 75, reason: 'Financial keywords detected' };
+        }
+
+        // Priority 3: Action required
+        if (match(['action required', 'please review', 'your approval', 'please confirm', 'follow up on', 'kindly assist', 'approval needed', 'your response is needed'])) {
+            return { category: 'action_required', confidence: 0.85, priority: 70, reason: 'Action request detected' };
+        }
+
+        // Priority 4: Meetings / calendar
+        if (match(['meeting', 'interview', 'schedule', 'calendar invite', 'zoom', 'google meet', 'teams call', 'appointment', 'standup', 'sync'])) {
+            return { category: 'meeting', confidence: 0.87, priority: 65, reason: 'Meeting/scheduling keywords detected' };
+        }
+
+        // Priority 5: Social networks
+        if (match(['linkedin', 'twitter', 'instagram', 'facebook', 'github notification', 'mentioned you', 'connection request', 'started following', 'noreply@', 'social notification'])) {
+            return { category: 'social', confidence: 0.90, priority: 20, reason: 'Social network email detected' };
+        }
+
+        // Priority 6: Promotional
+        if (match(['unsubscribe', 'sale', '% off', 'deal', 'offer', 'discount', 'coupon', 'promo', 'limited time', 'shop now', 'buy now', 'free trial', 'upgrade now'])) {
+            return { category: 'promotional', confidence: 0.91, priority: 15, reason: 'Promotional keywords detected' };
+        }
+
+        // Priority 7: Newsletter / updates
+        if (match(['newsletter', 'digest', 'weekly update', 'monthly report', 'announcement', 'release notes', 'changelog', 'alert', 'no-reply', 'noreply'])) {
+            return { category: 'newsletter', confidence: 0.83, priority: 25, reason: 'Newsletter or digest email' };
+        }
+
+        // Priority 8: Spam indicators
+        if (match(['congratulations', 'you have won', 'click here to claim', 'verify your account now', 'suspicious', 'out of office auto-reply'])) {
+            return { category: 'spam', confidence: 0.80, priority: 5, reason: 'Spam-like keywords detected' };
+        }
+
+        // Priority 9: Personal signals
+        if (match(['hey', 'hi there', 'dear friend', 'hope you are', 'miss you', 'family', 'mom', 'dad', 'brother', 'sister'])) {
+            return { category: 'personal', confidence: 0.75, priority: 55, reason: 'Personal email signals detected' };
+        }
+
+        // Default → FYI
+        return { category: 'fyi', confidence: 0.60, priority: 30, reason: 'General informational email' };
     }
 
     // -----------------------------------------------------------------------

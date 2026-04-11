@@ -57,6 +57,7 @@ export const RagUpsertEmailRequestSchema = z.object({
         body: z.string().default(''),
     })),
     userId: z.string().uuid(),
+    skipEmbedding: z.boolean().optional(),
 });
 export type RagUpsertEmailRequest = z.infer<typeof RagUpsertEmailRequestSchema>;
 

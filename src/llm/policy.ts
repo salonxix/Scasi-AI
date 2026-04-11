@@ -64,7 +64,7 @@ export const taskPolicies: Record<LLMTaskType, TaskModelPolicy> = {
     },
     embed: {
         task: 'embed',
-        primary: MODELS.GEMINI_EMBED_001,
+        primary: MODELS.LOCAL_EMBED,
         fallbackChain: [],
     },
 };

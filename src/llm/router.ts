@@ -10,6 +10,7 @@ const EMBED_DIM = 768;
 
 export class LLMRouter {
     private groqClients = new Map<string, Groq>();
+    private localEmbedder: any = null; // Store Transformers.js pipeline
 
     private getGroqClient(apiKeyEnv: string): Groq {
         let client = this.groqClients.get(apiKeyEnv);
@@ -334,13 +335,17 @@ export class LLMRouter {
         const startTime = Date.now();
         const { traceId } = options;
         const model = taskPolicies['embed'].primary;
-        const apiKey = this.getApiKey(model);
-
-        if (!apiKey) {
-            throw new Error(`${model.apiKeyEnv} not set — embeddings disabled, FTS search will be used instead.`);
-        }
-
+        
         try {
+            if (model.provider === 'local') {
+                return await this.embedViaLocal(texts, model, traceId, startTime);
+            }
+            
+            const apiKey = this.getApiKey(model);
+            if (!apiKey) {
+                throw new Error(`${model.apiKeyEnv} not set — embeddings disabled, FTS search will be used instead.`);
+            }
+
             if (model.provider === 'google') {
                 return await this.embedViaGemini(texts, model, apiKey, traceId, startTime);
             }
@@ -449,6 +454,55 @@ export class LLMRouter {
             allEmbeddings.push(...sorted.map(d => d.embedding));
 
             totalTokens += data.usage?.prompt_tokens ?? batchTexts.reduce((sum, t) => sum + Math.ceil(t.length / 4), 0);
+        }
+
+        const result: EmbedResult = {
+            embeddings: allEmbeddings,
+            usage: { promptTokens: totalTokens },
+            model: model.id,
+        };
+
+        traceLLMCall(traceId, 'embed', model.id, startTime, result);
+        return result;
+    }
+
+    /** Local embeddings using Transformers.js (100% Free and Offline) */
+    private async embedViaLocal(
+        texts: string[],
+        model: ModelConfig,
+        traceId: string | undefined,
+        startTime: number
+    ): Promise<EmbedResult> {
+        if (!this.localEmbedder) {
+            const { pipeline, env } = await import('@xenova/transformers');
+            // Disable local models checking since we'll download from HF hub the first time
+            env.allowLocalModels = false;
+            // Use quantized for highly efficient CPU execution
+            this.localEmbedder = await pipeline('feature-extraction', model.id, {
+                quantized: true,
+            });
+        }
+        
+        let totalTokens = 0;
+        const allEmbeddings: number[][] = [];
+
+        const batchSize = 100;
+        for (let i = 0; i < texts.length; i += batchSize) {
+             const batchTexts = texts.slice(i, i + batchSize);
+             
+             const output = await this.localEmbedder(batchTexts, { pooling: 'mean', normalize: true });
+             
+             // The output tensor is shape [batchSize, dim]
+             const data = output.tolist();
+             
+             if (batchTexts.length === 1 && typeof data[0] === 'number') {
+                 allEmbeddings.push(data as unknown as number[]);
+             } else {
+                 allEmbeddings.push(...(data as unknown as number[][]));
+             }
+             
+             // Estimate tokens based on char length
+             totalTokens += batchTexts.reduce((sum, t) => sum + Math.ceil(t.length / 4), 0);
         }
 
         const result: EmbedResult = {

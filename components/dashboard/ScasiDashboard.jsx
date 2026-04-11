@@ -531,6 +531,10 @@ grid-template-columns: 40% 60%;
                             <span style={{ fontSize: "14px", marginRight: "4px" }}>👥</span>
                             Team Collab
                         </div>
+                        <div className="mm-ni" onClick={() => onNavigate('analytics')} style={{ fontSize: "12.5px", fontWeight: "500", padding: "6px 10px 6px 13px" }}>
+                            <span style={{ fontSize: "14px", marginRight: "4px" }}>📊</span>
+                            Analytics
+                        </div>
 
                         <div className="mm-nd"></div>
                         <span className="mm-ns">Categories</span>
