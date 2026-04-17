@@ -42,3 +42,13 @@ next-env.d.ts
 
 # turbo
 .turbo
+
+# Generated artifacts — never commit these
+*.diff
+test_output.txt
+
+# IDE & tool configs — developer-specific
+.vscode/
+.mcp.json
+.kiro/hooks/
+.kiro/specs/
