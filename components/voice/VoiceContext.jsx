@@ -1,8 +1,7 @@
 ﻿"use client";
 /**
  * @file components/voice/VoiceContext.jsx
- * Global voice context — single useVoiceController instance shared across all pages.
- * Handles compose-via-voice flow: draft → ask user → read aloud or open compose modal.
+ * Global voice context — handles compose-via-voice flow.
  */
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
@@ -43,12 +42,12 @@ export function VoiceProvider({ children }) {
   const [voiceTranscript, setVoiceTranscript] = useState("");
   const [voiceMessages, setVoiceMessages] = useState([]);
 
-  // Pending draft state — set when AI composes an email
+  // Pending draft — set when AI composes an email
   const [pendingDraft, setPendingDraft] = useState(null);
   const pendingDraftRef = useRef(null);
   useEffect(() => { pendingDraftRef.current = pendingDraft; }, [pendingDraft]);
 
-  // Compose modal state
+  // Compose modal
   const [showCompose, setShowCompose] = useState(false);
   const [composeData, setComposeData] = useState(null);
 
@@ -67,18 +66,19 @@ export function VoiceProvider({ children }) {
       onAnswer: (answer, userText) => {
         setVoiceTranscript("");
 
-        // If pending draft, check if user is responding to "read aloud or view compose?"
         const draft = pendingDraftRef.current;
         if (draft) {
           if (matchesIntent(userText, READ_ALOUD)) {
+            // Read the email aloud
             addVoiceMessage("user", userText);
-            const readMsg = `Here is the email I drafted. To: ${draft.recipientName || draft.to || "the recipient"}. Subject: ${draft.subject}. Body: ${draft.body}`;
+            const readMsg = `To: ${draft.recipientName || draft.to || "the recipient"}. Subject: ${draft.subject}. ${draft.body}`;
             addVoiceMessage("assistant", readMsg);
             setPendingDraft(null);
             pendingDraftRef.current = null;
             return;
           }
           if (matchesIntent(userText, VIEW_COMPOSE)) {
+            // Open compose modal
             addVoiceMessage("user", userText);
             addVoiceMessage("assistant", "Opening the compose window for you now.");
             setComposeData(draft);
@@ -128,22 +128,10 @@ export function VoiceProvider({ children }) {
     else listener.resume();
   }, [isVoiceActive]);
 
-  // Build display messages — append draft prompt when pending
-  const displayMessages = pendingDraft
-    ? [
-        ...voiceMessages,
-        {
-          role: "assistant",
-          text: `I have drafted an email to ${pendingDraft.recipientName || pendingDraft.to || "the recipient"} with subject "${pendingDraft.subject}". Would you like me to read it aloud, or would you like to check it in the compose section?`,
-        },
-      ]
-    : voiceMessages;
-
   return (
     <VoiceContext.Provider value={{ voiceState, startSession, stopSession, isSupported, isVoiceActive }}>
       {children}
 
-      {/* Global floating mic button */}
       {status === "authenticated" && MicButton && !isVoiceActive && (
         <MicButton
           state={voiceState}
@@ -153,18 +141,16 @@ export function VoiceProvider({ children }) {
         />
       )}
 
-      {/* Global session overlay */}
       {status === "authenticated" && SessionOverlay && (
         <SessionOverlay
           state={voiceState}
           isVisible={isVoiceActive}
           onDismiss={stopSession}
           transcript={voiceTranscript}
-          messages={displayMessages}
+          messages={voiceMessages}
         />
       )}
 
-      {/* Compose modal — opened when user says "show compose" after draft */}
       {showCompose && (
         <ComposeWithAI
           emails={[]}

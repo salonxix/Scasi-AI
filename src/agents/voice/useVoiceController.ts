@@ -260,21 +260,27 @@ export function useVoiceController(options: VoiceControllerOptions = {}): VoiceC
       // Strip any leaked think tags before speaking
       answer = answer.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
       if (!answer) answer = "Sorry, I couldn't get a response. Could you try asking again?";
+
+      // If compose data received, suppress the orchestrator answer and only speak
+      // the "I have drafted... read aloud or open compose?" prompt
+      if (composeData) {
+        const draftPrompt = `I have drafted an email to ${composeData.recipientName || 'the recipient'} with subject "${composeData.subject}". Would you like me to read it aloud, or open the compose section?`;
+        cbAnswer.current?.(draftPrompt, text);
+        if (!activeRef.current) return;
+        setVoiceState('speaking');
+        await speak(draftPrompt);
+        if (!activeRef.current) return;
+        cbCompose.current?.(composeData);
+        startListening();
+        return;
+      }
+
       cbAnswer.current?.(answer, text);
       if (!activeRef.current) return;
 
       setVoiceState('speaking');
       await speak(cleanForSpeech(answer));
       if (!activeRef.current) return;
-
-      // After speaking, trigger compose callback — VoiceWidget handles the "read aloud or view" flow
-      if (composeData) {
-        cbCompose.current?.(composeData);
-        // Speak the prompt asking user what they want to do
-        const draftPrompt = `I've drafted an email to ${composeData.recipientName || 'the recipient'} with subject "${composeData.subject}". Would you like me to read it aloud, or would you like to check it in the compose section?`;
-        await speak(draftPrompt);
-        if (!activeRef.current) return;
-      }
 
       startListening();
     } catch (err) {
