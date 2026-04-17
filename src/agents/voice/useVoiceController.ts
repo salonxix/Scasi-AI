@@ -214,7 +214,7 @@ export function useVoiceController(options: VoiceControllerOptions = {}): VoiceC
       if (isReadAloud) {
         const recipient = pendingDraft.recipientName || pendingDraft.to || 'the recipient';
         const readMsg = `To: ${recipient}. Subject: ${pendingDraft.subject}. ${pendingDraft.body}`;
-        pendingDraftRef.current = null;
+        // Keep pendingDraftRef so user can still say "open compose" after hearing it
         cbAnswer.current?.(readMsg, text);
         setVoiceState('speaking');
         await speak(readMsg);
@@ -225,7 +225,7 @@ export function useVoiceController(options: VoiceControllerOptions = {}): VoiceC
 
       if (isViewCompose) {
         const openMsg = 'Opening the compose window for you now.';
-        pendingDraftRef.current = null;
+        pendingDraftRef.current = null; // Clear only when user opens compose
         cbAnswer.current?.(openMsg, text);
         setVoiceState('speaking');
         await speak(openMsg);
