@@ -1,6 +1,7 @@
-"use client";
+﻿"use client";
 
 import React from "react";
+import { CalendarDays, Users2 } from "lucide-react";
 import FollowUpTracker from "./FollowUpTracker";
 
 function NavButton({
@@ -84,10 +85,10 @@ export default function NavColumn({
         }}>
             <div style={{ fontWeight: 800, fontSize: 14, color: "#0f172a", padding: "6px 6px" }}>Mail</div>
 
-            <NavButton id="inbox" label="Inbox" count={counts.inbox} icon="📥" activeFolder={activeFolder} setActiveFolder={setActiveFolder} setActiveProject={setActiveProject} />
-            <NavButton id="starred" label="Starred" count={counts.starred} icon="⭐" activeFolder={activeFolder} setActiveFolder={setActiveFolder} setActiveProject={setActiveProject} />
-            <NavButton id="snoozed" label="Snoozed" count={counts.snoozed} icon="⏳" activeFolder={activeFolder} setActiveFolder={setActiveFolder} setActiveProject={setActiveProject} />
-            <NavButton id="done" label="Done" count={counts.done} icon="✅" activeFolder={activeFolder} setActiveFolder={setActiveFolder} setActiveProject={setActiveProject} />
+            <NavButton id="inbox" label="Inbox" count={counts.inbox} icon="inbox" activeFolder={activeFolder} setActiveFolder={setActiveFolder} setActiveProject={setActiveProject} />
+            <NavButton id="starred" label="Starred" count={counts.starred} icon="star" activeFolder={activeFolder} setActiveFolder={setActiveFolder} setActiveProject={setActiveProject} />
+            <NavButton id="snoozed" label="Snoozed" count={counts.snoozed} icon="clock" activeFolder={activeFolder} setActiveFolder={setActiveFolder} setActiveProject={setActiveProject} />
+            <NavButton id="done" label="Done" count={counts.done} icon="check" activeFolder={activeFolder} setActiveFolder={setActiveFolder} setActiveProject={setActiveProject} />
 
             <hr style={{ border: "none", borderTop: "1px solid #E6EEF6", margin: "6px 0" }} />
 
@@ -106,7 +107,7 @@ export default function NavColumn({
                     width: 28, height: 28, borderRadius: 8, display: "inline-flex",
                     alignItems: "center", justifyContent: "center",
                     background: "#EEF2FF", color: "#2563EB", fontWeight: 800, fontSize: 12
-                }}>📅</span>
+                }}><CalendarDays size={16} /></span>
                 <span>Calendar</span>
             </button>
             <button
@@ -121,7 +122,7 @@ export default function NavColumn({
                     width: 28, height: 28, borderRadius: 8, display: "inline-flex",
                     alignItems: "center", justifyContent: "center",
                     background: "#EEF2FF", color: "#2563EB", fontWeight: 800, fontSize: 12
-                }}>👥</span>
+                }}><Users2 size={16} /></span>
                 <span>Team</span>
             </button>
 
