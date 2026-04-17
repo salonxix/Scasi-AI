@@ -209,12 +209,16 @@ export function useVoiceController(options: VoiceControllerOptions = {}): VoiceC
         }),
       });
 
-      if (!res.ok) throw new Error(`Chat API error: ${res.status}`);
+      if (!res.ok) {
+        const errBody = await res.text().catch(() => '');
+        throw new Error(`Chat API error ${res.status}: ${errBody.slice(0, 200)}`);
+      }
 
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
       let answer = '';
       let composeData: Record<string, string> | null = null;
+      let sseError = '';
 
       if (reader) {
         let buf = '';
@@ -229,6 +233,7 @@ export function useVoiceController(options: VoiceControllerOptions = {}): VoiceC
             try {
               const ev = JSON.parse(line.slice(6));
               if (ev.type === 'token' && ev.text) answer += ev.text;
+              if (ev.type === 'error') sseError = ev.message || 'Unknown error';
               // Handle compose event — store data to trigger modal after speaking
               if (ev.type === 'compose') {
                 composeData = {
@@ -240,9 +245,15 @@ export function useVoiceController(options: VoiceControllerOptions = {}): VoiceC
                   cc: ev.cc || '',
                 };
               }
-            } catch { /* skip */ }
+            } catch { /* skip malformed */ }
           }
         }
+      }
+
+      // If we got an SSE error and no answer tokens, surface the error
+      if (!answer && sseError) {
+        console.error('[Voice] SSE error from server:', sseError);
+        answer = "I ran into an issue processing that. Please try again.";
       }
 
       if (!answer) answer = "Sorry, I couldn't get a response. Could you try asking again?";
@@ -264,6 +275,7 @@ export function useVoiceController(options: VoiceControllerOptions = {}): VoiceC
       startListening();
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : 'Unknown error';
+      console.error('[Voice] processTranscript error:', errMsg);
       cbError.current?.({
         code: 'ORCHESTRATOR_ERROR',
         message: errMsg,

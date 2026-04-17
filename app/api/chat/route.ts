@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/route';
 import { ensureUserExists } from '@/lib/supabase';
+import { getAppUserIdFromSession } from '@/lib/appUser';
 import { ensureUser } from '@/src/agents/rag/repository';
 import { orchestratorAgent } from '@/src/agents/orchestrator';
 import { TraceId, UserId, SessionId } from '@/src/agents/_shared/types';
@@ -18,17 +19,28 @@ export async function POST(req: Request) {
         });
     }
 
+    // Derive userId — fall back to session-derived UUID if Supabase is unavailable
     let userId: string;
     try {
         userId = await ensureUserExists(session);
-        await ensureUser(userId, session.user?.email ?? '', session.user?.name, session.user?.image);
+        // Best-effort RAG user provision — non-fatal if it fails
+        try {
+            await ensureUser(userId, session.user?.email ?? '', session.user?.name, session.user?.image);
+        } catch (ragErr) {
+            console.warn('[/api/chat] ensureUser (RAG) failed (non-fatal):', ragErr instanceof Error ? ragErr.message : ragErr);
+        }
     } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : 'Failed to provision user';
-        console.error('[/api/chat] ensureUserExists failed:', message);
-        return new Response(JSON.stringify({ error: message }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' },
-        });
+        // Supabase not configured or unavailable — derive userId from session directly
+        // so the voice assistant still works for LLM-only tasks
+        console.warn('[/api/chat] ensureUserExists failed, falling back to session userId:', err instanceof Error ? err.message : err);
+        try {
+            userId = getAppUserIdFromSession(session);
+        } catch {
+            return new Response(JSON.stringify({ error: 'Session missing email' }), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }
     }
 
     const body = await req.json().catch(() => null);
