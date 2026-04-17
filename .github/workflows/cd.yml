@@ -50,10 +50,10 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `### 🚀 Preview Deployment Ready\n\n**URL:** ${{ steps.deploy.outputs.url }}\n**Commit:** ${{ github.sha }}\n**Branch:** ${{ github.head_ref }}`
+              body: `### 🚀 Preview Deployment Ready\n\n**URL:** ${{ steps.deploy.outputs.url }}\n**Commit:** \`${{ github.sha }}\`\n**Branch:** \`${{ github.head_ref }}\``
             })
 
-  # ─── PRODUCTION DEPLOY (main only, CI must pass first) ──────────
+  # ─── PRODUCTION DEPLOY (main only, waits for CI gate) ───────────
   deploy:
     name: Deploy (Production)
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -94,3 +94,15 @@ jobs:
 
       - name: Print deployment URL
         run: echo "Deployed to ${{ steps.deploy.outputs.url }}"
+
+      - name: Rollback on deploy failure
+        if: failure()
+        run: |
+          echo "Deploy failed — rolling back to last successful deployment"
+          LAST=$(vercel ls --token=${{ secrets.VERCEL_TOKEN }} --prod 2>/dev/null | grep "Ready" | sed -n '2p' | awk '{print $2}')
+          if [ -n "$LAST" ]; then
+            vercel rollback "$LAST" --token=${{ secrets.VERCEL_TOKEN }}
+            echo "Rolled back to $LAST"
+          else
+            echo "No previous deployment found to roll back to"
+          fi

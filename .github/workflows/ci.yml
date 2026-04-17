@@ -11,9 +11,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ─── 1. LINT ────────────────────────────────────────────────────
-  lint:
-    name: Lint
+  # ─── 1. INSTALL (shared cache for all jobs) ─────────────────────
+  install:
+    name: Install Dependencies
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,50 +25,81 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ github.sha }}
+
+  # ─── 2. LINT ────────────────────────────────────────────────────
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Restore node_modules cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ github.sha }}
 
       - name: Run ESLint
         run: npm run lint
 
-  # ─── 2. SECURITY AUDIT ──────────────────────────────────────────
+  # ─── 3. SECURITY AUDIT ──────────────────────────────────────────
   audit:
     name: Security Audit
     runs-on: ubuntu-latest
+    needs: install
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Restore node_modules cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ github.sha }}
 
       - name: Audit dependencies (high + critical only)
         run: npm audit --audit-level=high
 
-  # ─── 3. TYPE CHECK ──────────────────────────────────────────────
+  # ─── 4. TYPE CHECK ──────────────────────────────────────────────
   typecheck:
     name: Type Check
     runs-on: ubuntu-latest
+    needs: install
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Restore node_modules cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ github.sha }}
 
       - name: TypeScript type check
         run: npx tsc --noEmit
 
-  # ─── 4. UNIT TESTS + COVERAGE ───────────────────────────────────
+  # ─── 5. UNIT TESTS + COVERAGE (with threshold enforcement) ──────
   test:
     name: Unit Tests & Coverage
     runs-on: ubuntu-latest
+    needs: install
     env:
       NEXTAUTH_SECRET: ci-secret
       NEXTAUTH_URL: http://localhost:3000
@@ -80,10 +111,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Restore node_modules cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ github.sha }}
 
       - name: Run tests with coverage
         run: npx jest --ci --runInBand --forceExit --coverage --coverageReporters=text --coverageReporters=lcov
@@ -95,7 +128,7 @@ jobs:
           path: coverage/
           retention-days: 7
 
-  # ─── 5. BUILD (gated on all checks) ─────────────────────────────
+  # ─── 6. BUILD (gated on ALL checks passing) ─────────────────────
   build:
     name: Production Build
     runs-on: ubuntu-latest
@@ -113,10 +146,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Restore node_modules cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ github.sha }}
 
       - name: Build
         run: npm run build
