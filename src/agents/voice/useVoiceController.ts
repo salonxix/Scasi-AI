@@ -21,7 +21,10 @@ import type {
 } from './voiceTypes';
 import { truncateToWords, cleanForSpeech } from './voiceUtils';
 
-const GREETING        = "Yeah?";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+const GREETING_BUTTON  = "Yeah?";
+const GREETING_WAKE    = "Hey! How can I help?";
 const CLOSING_FAREWELL = "Happy to help! Have a great day.";
 const MAX_TTS_WORDS   = 500;
 const SILENCE_TIMEOUT = 20000;
@@ -45,9 +48,10 @@ function isDone(text: string): boolean {
   return /\b(thank\s*you|thanks|bye|goodbye|that'?s?\s*(all|it)|all\s*(good|set)|i'?m?\s*(done|good|all\s*set))\b/.test(n);
 }
 
-function getSpeechRecognitionCtor(): SpeechRecognitionConstructor | null {
+function getSpeechRecognitionCtor(): (new () => any) | null {
   if (typeof window === 'undefined') return null;
-  return window.SpeechRecognition ?? window.webkitSpeechRecognition ?? null;
+  const w = window as any;
+  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
 function isTTSSupported(): boolean {
@@ -76,7 +80,7 @@ function pickFemaleVoice(): SpeechSynthesisVoice | null {
 export function useVoiceController(options: VoiceControllerOptions = {}): VoiceControllerReturn {
   const [state, setState] = useState<VoiceState>('idle');
   const stateRef  = useRef<VoiceState>('idle');
-  const recRef    = useRef<SpeechRecognition | null>(null);
+  const recRef    = useRef<any>(null);
   const timerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeRef = useRef(false);
 
@@ -295,7 +299,7 @@ export function useVoiceController(options: VoiceControllerOptions = {}): VoiceC
 
       let finalTranscript = '';
 
-      rec.onresult = (event: SpeechRecognitionEvent) => {
+      rec.onresult = (event: any) => {
         resetTimer();
         let interim = '';
         finalTranscript = '';
@@ -310,7 +314,7 @@ export function useVoiceController(options: VoiceControllerOptions = {}): VoiceC
         if (interim) cbTranscript.current?.(interim);
       };
 
-      rec.onerror = (event: SpeechRecognitionErrorEvent) => {
+      rec.onerror = (event: any) => {
         // 'aborted' fires when we call rec.abort() intentionally — not a real error
         // 'no-speech' fires when mic times out with no audio — also not a real error
         if (event.error === 'aborted' || event.error === 'no-speech') return;
@@ -346,23 +350,19 @@ export function useVoiceController(options: VoiceControllerOptions = {}): VoiceC
   }, [stopRecognition, setVoiceState, emitError, processTranscript]);
 
   // ── Public API ────────────────────────────────────────────────────────────
-  const startSession = useCallback(async () => {
+  const startSession = useCallback(async (fromWakeWord = false) => {
     if (activeRef.current) return;
-    // Lazy check — safe to call after hydration
     if (!getSpeechRecognitionCtor()) {
       emitError({ code: 'STT_UNSUPPORTED', message: 'Voice not supported. Use Chrome or Edge.' });
       return;
     }
     activeRef.current = true;
 
-    // Brief pause so the wake-word listener can fully release the mic
-    // before we open a new SpeechRecognition instance.
     await new Promise(r => setTimeout(r, 800));
     if (!activeRef.current) return;
 
-    // Greet first, then listen
     setVoiceState('speaking');
-    await speak(GREETING);
+    await speak(fromWakeWord ? GREETING_WAKE : GREETING_BUTTON);
     if (!activeRef.current) return;
     startListeningRef.current();
   }, [emitError, speak, setVoiceState]);

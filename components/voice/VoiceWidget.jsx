@@ -47,7 +47,7 @@ export default function VoiceWidget() {
   // Start wake-word listener once user is authenticated
   useEffect(() => {
     if (status !== "authenticated") return;
-    const listener = new WakeWordListener({ onDetected: () => startSessionRef.current() });
+    const listener = new WakeWordListener({ onDetected: () => startSessionRef.current(true) });
     wakeListenerRef.current = listener;
     listener.start();
     return () => listener.stop();

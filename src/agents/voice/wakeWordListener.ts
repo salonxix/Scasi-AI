@@ -115,6 +115,7 @@ export class WakeWordListener {
     };
 
     rec.onerror = (event: SpeechRecognitionErrorEvent) => {
+      console.log('[WakeWord] error:', event.error);
       if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
         this.running = false;
         return;
