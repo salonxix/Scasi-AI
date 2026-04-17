@@ -50,5 +50,4 @@ test_output.txt
 # IDE & tool configs — developer-specific
 .vscode/
 .mcp.json
-.kiro/hooks/
-.kiro/specs/
+.kiro/
