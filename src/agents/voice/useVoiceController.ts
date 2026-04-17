@@ -23,7 +23,8 @@ import { truncateToWords, cleanForSpeech } from './voiceUtils';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-const GREETING        = "Yeah?";
+const GREETING_BUTTON  = "Yeah?";
+const GREETING_WAKE    = "Hey! How can I help?";
 const CLOSING_FAREWELL = "Happy to help! Have a great day.";
 const MAX_TTS_WORDS   = 500;
 const SILENCE_TIMEOUT = 20000;
@@ -349,23 +350,19 @@ export function useVoiceController(options: VoiceControllerOptions = {}): VoiceC
   }, [stopRecognition, setVoiceState, emitError, processTranscript]);
 
   // ── Public API ────────────────────────────────────────────────────────────
-  const startSession = useCallback(async () => {
+  const startSession = useCallback(async (fromWakeWord = false) => {
     if (activeRef.current) return;
-    // Lazy check — safe to call after hydration
     if (!getSpeechRecognitionCtor()) {
       emitError({ code: 'STT_UNSUPPORTED', message: 'Voice not supported. Use Chrome or Edge.' });
       return;
     }
     activeRef.current = true;
 
-    // Brief pause so the wake-word listener can fully release the mic
-    // before we open a new SpeechRecognition instance.
     await new Promise(r => setTimeout(r, 800));
     if (!activeRef.current) return;
 
-    // Greet first, then listen
     setVoiceState('speaking');
-    await speak(GREETING);
+    await speak(fromWakeWord ? GREETING_WAKE : GREETING_BUTTON);
     if (!activeRef.current) return;
     startListeningRef.current();
   }, [emitError, speak, setVoiceState]);

@@ -30,7 +30,11 @@ export class WakeWordListener {
   }
 
   start(): void {
-    if (!this.isSupported || this.running) return;
+    if (!this.isSupported || this.running) {
+      console.log('[WakeWord] start() blocked — isSupported:', this.isSupported, 'running:', this.running);
+      return;
+    }
+    console.log('[WakeWord] listener starting...');
     this.running = true;
     this._createAndStart();
     document.addEventListener('visibilitychange', this._onVisibilityChange);
@@ -88,9 +92,9 @@ export class WakeWordListener {
 
     rec.onresult = (event: any) => {
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        // Check both final and interim results for faster response
         for (let alt = 0; alt < event.results[i].length; alt++) {
           const transcript: string = event.results[i][alt].transcript.toLowerCase().trim();
+          console.log('[WakeWord] heard:', transcript);
           const isWake =
             transcript.includes(this.wakePhrase) ||
             transcript.includes('hey scasi') ||
@@ -100,10 +104,18 @@ export class WakeWordListener {
             transcript.includes('hey stacy') ||
             transcript.includes('hey kasey') ||
             transcript.includes('hey casey') ||
-            transcript.includes('hey spacey');
+            transcript.includes('hey spacey') ||
+            transcript.includes('face kaisi') ||
+            transcript.includes('chess kaisi') ||
+            transcript.includes('face kassi') ||
+            transcript.includes('hey kassi') ||
+            (transcript.includes('face') && transcript.includes('kaisi')) ||
+            (transcript.includes('hey') && transcript.includes('kaisi')) ||
+            transcript.includes('kaisi');
           if (isWake) {
+            console.log('[WakeWord] DETECTED — firing onDetected');
             this.onDetected();
-            return; // fire once per detection
+            return;
           }
         }
       }
@@ -117,11 +129,14 @@ export class WakeWordListener {
     };
 
     rec.onerror = (event: any) => {
+      console.log('[WakeWord] error:', event.error);
       if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+        console.log('[WakeWord] mic permission denied — stopping');
         this.running = false;
         return;
       }
-      // no-speech / aborted / network — restart fresh after a short delay
+      // aborted fires when we call recognition.abort() intentionally — not a real error
+      if (event.error === 'aborted') return;
       if (this.running && !this.paused) {
         setTimeout(() => this._createAndStart(), 500);
       }

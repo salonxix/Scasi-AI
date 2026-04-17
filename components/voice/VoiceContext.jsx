@@ -49,10 +49,8 @@ export function VoiceProvider({ children }) {
   useEffect(() => {
     if (status !== "authenticated") return;
     const listener = new WakeWordListener({ onDetected: () => {
-      // Pause the wake listener immediately before starting session
-      // so it releases the mic before session STT grabs it
       listener.pause();
-      startSessionRef.current();
+      startSessionRef.current(true);
     }});
     wakeListenerRef.current = listener;
     listener.start();
