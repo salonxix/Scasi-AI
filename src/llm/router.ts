@@ -1,4 +1,4 @@
-import { Groq } from 'groq-sdk';
+﻿import { Groq } from 'groq-sdk';
 import { LLMTaskType, ModelConfig, GenerationOptions, GenerationResult, EmbedOptions, EmbedResult } from './types';
 import { taskPolicies } from './policy';
 import { rateLimiter } from './rate-limiter';
@@ -165,7 +165,7 @@ export class LLMRouter {
                             headers: {
                                 'Content-Type': 'application/json',
                                 'Authorization': `Bearer ${apiKey}`,
-                                'HTTP-Referer': 'http://localhost:3000',
+                                'HTTP-Referer': process.env.NEXTAUTH_URL || 'http://localhost:3000',
                                 'X-Title': 'Scasi-AI'
                             },
                             body: JSON.stringify(body),
@@ -252,7 +252,7 @@ export class LLMRouter {
                     return finalResult;
 
                 } catch (err: unknown) {
-                    // Rethrow AbortError immediately — don't waste time trying fallback models.
+                    // Rethrow AbortError immediately â€” don't waste time trying fallback models.
                     // Use err.name check instead of instanceof DOMException to avoid
                     // ReferenceError on runtimes where DOMException is not defined.
                     if (err instanceof Error && err.name === 'AbortError') {
@@ -299,7 +299,7 @@ export class LLMRouter {
                 // Check abort before each stream attempt
                 if (options.signal?.aborted) throw createAbortError('Aborted');
                 yield* this.streamFromModel(model, prompt, options, (text) => { collectedText += text; });
-                // Success — trace and return
+                // Success â€” trace and return
                 const estCompletionTokens = Math.ceil(collectedText.length / 4);
                 traceLLMCall(options.traceId, 'streamText', model.id, startTime, {
                     text: collectedText,
@@ -309,7 +309,7 @@ export class LLMRouter {
                 return;
             } catch (err) {
                 lastError = err;
-                // Rethrow AbortError immediately — don't try fallback models
+                // Rethrow AbortError immediately â€” don't try fallback models
                 if (err instanceof Error && err.name === 'AbortError') {
                     traceLLMCall(options.traceId, 'streamText', model.id, startTime, undefined, err);
                     throw err;
@@ -363,7 +363,7 @@ export class LLMRouter {
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${apiKey}`,
-                    'HTTP-Referer': 'http://localhost:3000',
+                    'HTTP-Referer': process.env.NEXTAUTH_URL || 'http://localhost:3000',
                     'X-Title': 'Scasi-AI'
                 },
                 body: JSON.stringify({
@@ -492,7 +492,7 @@ export class LLMRouter {
             
             const apiKey = this.getApiKey(model);
             if (!apiKey) {
-                throw new Error(`${model.apiKeyEnv} not set — embeddings disabled, FTS search will be used instead.`);
+                throw new Error(`${model.apiKeyEnv} not set â€” embeddings disabled, FTS search will be used instead.`);
             }
 
             if (model.provider === 'google') {
@@ -593,7 +593,7 @@ export class LLMRouter {
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${apiKey}`,
-                    'HTTP-Referer': 'http://localhost:3000',
+                    'HTTP-Referer': process.env.NEXTAUTH_URL || 'http://localhost:3000',
                     'X-Title': 'Scasi-AI',
                 },
                 body: JSON.stringify({
@@ -635,7 +635,7 @@ export class LLMRouter {
         startTime: number,
         signal?: AbortSignal
     ): Promise<EmbedResult> {
-        // Store the Promise so concurrent callers all await the same init —
+        // Store the Promise so concurrent callers all await the same init â€”
         // avoids multiple redundant downloads and model instantiations.
         if (!this.localEmbedderPromise) {
             this.localEmbedderPromise = (async () => {
@@ -663,7 +663,7 @@ export class LLMRouter {
 
         const batchSize = 100;
         for (let i = 0; i < texts.length; i += batchSize) {
-             // Check abort between batches — local embeddings can't truly abort mid-batch
+             // Check abort between batches â€” local embeddings can't truly abort mid-batch
              if (signal?.aborted) throw createAbortError('Aborted');
 
              const batchTexts = texts.slice(i, i + batchSize);
