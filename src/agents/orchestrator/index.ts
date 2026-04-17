@@ -97,21 +97,44 @@ Classify the user's request into one of these workflows:
   Examples: "reply to John", "send a response to Sarah", "write back to the client", "respond to Mark's email"
 
 - send_email: User wants to compose and send a NEW email to someone (not a reply to an existing thread).
-  Examples: "send an email to Rahul", "write an email to John saying...", "email Sarah about the meeting", "send a message to the team", "compose an email to boss", "send mail to Priya that...", "write to manager about leave"
+  Trigger words: "send", "compose", "write", "draft", "email", "mail", "message" — combined with a recipient or content.
+  Examples:
+    "send an email to Rahul"
+    "compose a mail to John"
+    "compose mail to Sarah saying..."
+    "write an email to the team"
+    "email Sarah about the meeting"
+    "send a message to boss"
+    "compose an email to manager"
+    "send mail to Priya that the report is ready"
+    "write to John about the project"
+    "draft an email to client"
+    "mail Rahul about tomorrow's meeting"
+    "compose email to HR"
+    "send email to support team"
   
-- general: Everything else — single tasks like summarize, classify, explain, search, draft a standalone reply, answer questions about emails.
-  Examples: "summarize this", "what does this email say", "is this urgent?", "draft a reply", "how many unread emails", "find emails from John", "what's in my inbox", "classify this email"
+- general: Everything else — single tasks like summarize, classify, explain, search, answer questions about emails, calendar, burnout, team.
+  Examples: "summarize this", "what does this email say", "is this urgent?", "how many unread emails", "find emails from John", "what's in my inbox", "what's on my calendar", "show my burnout score"
 
 CRITICAL RULES:
-- "Send an email to X" or "Write an email to X" → send_email
-- "Reply to X" or "Respond to X" → reply_to (existing thread)
-- "Summarize this email" → general (single task, not full pipeline)
-- "Draft a reply" → general (unless they also want classify + summarize + tasks)
+- ANY phrase with "send/compose/write/draft" + "email/mail/message" + a recipient or content → send_email
+- "compose mail to X" → send_email (NOT general)
+- "compose email to X" → send_email (NOT general)
+- "send mail to X" → send_email
+- "write a mail to X" → send_email
+- "Reply to X" or "Respond to X's email" → reply_to (existing thread reply)
+- "Summarize this email" → general
 - "What does this say?" → general
-- Only route to handle_for_me when the user wants the COMPLETE analysis + draft reply pipeline
-- If ambiguous, default to "general" — it's safer and more flexible
+- Calendar, burnout, inbox questions → general
+- Only route to handle_for_me when user wants COMPLETE analysis + draft reply pipeline
+- If ambiguous between send_email and general, choose send_email when a recipient is mentioned
 
-Return JSON: { "workflow": "...", "target": "optional person name", "reasoning": "one-sentence explanation" }`;
+Return JSON: { "workflow": "...", "target": "optional person name for reply_to", "reasoning": "one-sentence explanation" }`;
+
+// Fast regex pre-check — catches common send/compose phrases before hitting the LLM
+// This ensures "compose mail to X" never falls through to general
+const SEND_EMAIL_REGEX = /\b(send|compose|write|draft|mail)\b.{0,30}\b(email|mail|message|e-mail)\b|\b(email|mail)\s+\w+\s+(about|regarding|saying|that|to\s+tell)/i;
+const COMPOSE_MAIL_REGEX = /\bcompose\s+(a\s+)?(mail|email|message)\b|\bsend\s+(a\s+)?(mail|email|message)\b|\bwrite\s+(a\s+)?(mail|email|message)\b|\bdraft\s+(a\s+)?(mail|email|message)\b/i;
 
 function buildReActSystemPrompt(): string {
     return `You are Scasi, a fully intelligent AI assistant and the voice brain of the Scasi platform. You know everything about the user's data and the Scasi app.
@@ -119,6 +142,7 @@ function buildReActSystemPrompt(): string {
 SCASI PLATFORM KNOWLEDGE:
 Scasi is an AI-powered email and productivity platform with these features:
 - Inbox & Email Management: read, search, summarize, classify, and reply to emails
+- Compose & Send Email: compose new emails to anyone using natural language — just say "compose mail to X" or "send email to Y saying..."
 - AI Priority Scoring: scores emails 1-100 by urgency
 - AI Categorization: sorts emails into urgent, action_required, fyi, meeting, newsletter, personal, financial, social, promotional, spam
 - Spam Neural Shield: 99.4% accuracy spam detection
@@ -643,6 +667,19 @@ export class OrchestratorAgent implements Agent<OrchestratorRequest, Orchestrato
     // -----------------------------------------------------------------------
 
     private async detectIntent(userMessage: string, traceId: string, signal?: AbortSignal): Promise<Intent> {
+        // Fast regex pre-check — catches "compose mail", "send mail", "write email" etc.
+        // before spending an LLM call, ensuring these never fall through to general
+        if (COMPOSE_MAIL_REGEX.test(userMessage) || SEND_EMAIL_REGEX.test(userMessage)) {
+            // Make sure it's not a reply (reply/respond/write back to existing thread)
+            const isReply = /\b(reply|respond|write\s+back|response)\s+(to|for)\b/i.test(userMessage);
+            if (!isReply) {
+                return {
+                    workflow: 'send_email',
+                    reasoning: 'Detected compose/send email intent via regex pre-check',
+                };
+            }
+        }
+
         try {
             const result = await llmRouter.generateText('route', userMessage, {
                 schema: IntentSchema,
