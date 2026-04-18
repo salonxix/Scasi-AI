@@ -23,10 +23,10 @@ import { truncateToWords, cleanForSpeech } from './voiceUtils';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-const GREETING_BUTTON  = "Yeah?";
-const GREETING_WAKE    = "Hey! How can I help?";
+const GREETING_BUTTON = "Yeah?";
+const GREETING_WAKE = "Hey! How can I help?";
 const CLOSING_FAREWELL = "Happy to help! Have a great day.";
-const MAX_TTS_WORDS   = 500;
+const MAX_TTS_WORDS = 500;
 const SILENCE_TIMEOUT = 20000;
 
 const DONE_PHRASES = new Set([
@@ -79,31 +79,31 @@ function pickFemaleVoice(): SpeechSynthesisVoice | null {
 
 export function useVoiceController(options: VoiceControllerOptions = {}): VoiceControllerReturn {
   const [state, setState] = useState<VoiceState>('idle');
-  const stateRef  = useRef<VoiceState>('idle');
-  const recRef    = useRef<any>(null);
-  const timerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stateRef = useRef<VoiceState>('idle');
+  const recRef = useRef<any>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeRef = useRef(false);
 
   // Stable callback refs — never stale inside closures
-  const cbTranscript    = useRef(options.onTranscript);
-  const cbAnswer        = useRef(options.onAnswer);
-  const cbStateChange   = useRef(options.onStateChange);
-  const cbError         = useRef(options.onError);
-  const cbCompose       = useRef(options.onCompose);
-  const cbReadAloud     = useRef(options.onReadAloud);
-  const sessionIdRef    = useRef(options.sessionId);
+  const cbTranscript = useRef(options.onTranscript);
+  const cbAnswer = useRef(options.onAnswer);
+  const cbStateChange = useRef(options.onStateChange);
+  const cbError = useRef(options.onError);
+  const cbCompose = useRef(options.onCompose);
+  const cbReadAloud = useRef(options.onReadAloud);
+  const sessionIdRef = useRef(options.sessionId);
   const emailContextRef = useRef(options.emailContext);
   // Stores the pending draft so processTranscript can intercept "read aloud" responses
   const pendingDraftRef = useRef<Record<string, string> | null>(null);
 
   useEffect(() => {
-    cbTranscript.current    = options.onTranscript;
-    cbAnswer.current        = options.onAnswer;
-    cbStateChange.current   = options.onStateChange;
-    cbError.current         = options.onError;
-    cbCompose.current       = options.onCompose;
-    cbReadAloud.current     = options.onReadAloud;
-    sessionIdRef.current    = options.sessionId;
+    cbTranscript.current = options.onTranscript;
+    cbAnswer.current = options.onAnswer;
+    cbStateChange.current = options.onStateChange;
+    cbError.current = options.onError;
+    cbCompose.current = options.onCompose;
+    cbReadAloud.current = options.onReadAloud;
+    sessionIdRef.current = options.sessionId;
     emailContextRef.current = options.emailContext;
   });
 
@@ -135,11 +135,11 @@ export function useVoiceController(options: VoiceControllerOptions = {}): VoiceC
         const utt = new SpeechSynthesisUtterance(truncateToWords(text, MAX_TTS_WORDS));
         const voice = pickFemaleVoice();
         if (voice) utt.voice = voice;
-        utt.rate   = 1.0;
-        utt.pitch  = 1.15;
+        utt.rate = 1.0;
+        utt.pitch = 1.15;
         utt.volume = 1.0;
         const safetyTimeout = setTimeout(() => { window.speechSynthesis.cancel(); resolve(); }, 30_000);
-        utt.onend  = () => { clearTimeout(safetyTimeout); resolve(); };
+        utt.onend = () => { clearTimeout(safetyTimeout); resolve(); };
         utt.onerror = () => { clearTimeout(safetyTimeout); resolve(); };
         window.speechSynthesis.speak(utt);
       };
@@ -173,7 +173,7 @@ export function useVoiceController(options: VoiceControllerOptions = {}): VoiceC
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
   }, []);
 
-  const startListeningRef = useRef<() => void>(() => {});
+  const startListeningRef = useRef<() => void>(() => { });
   const startListening = useCallback(() => startListeningRef.current(), []);
 
   // ── Process final transcript ──────────────────────────────────────────────
@@ -199,16 +199,16 @@ export function useVoiceController(options: VoiceControllerOptions = {}): VoiceC
     const pendingDraft = pendingDraftRef.current;
     if (pendingDraft) {
       const lower = text.toLowerCase().trim().replace(/[.,!?;:]+$/, '');
-      const isReadAloud = ['read','read aloud','read it','read it out','read it aloud','read out',
-        'yes read','yes read it','yes please read','read the email','read it to me',
-        'yes','yeah','yep','sure','go ahead','please read','ok read','okay read',
+      const isReadAloud = ['read', 'read aloud', 'read it', 'read it out', 'read it aloud', 'read out',
+        'yes read', 'yes read it', 'yes please read', 'read the email', 'read it to me',
+        'yes', 'yeah', 'yep', 'sure', 'go ahead', 'please read', 'ok read', 'okay read',
       ].some(p => lower === p || lower.includes(p));
 
-      const isViewCompose = ['view','show','compose','open','check','see','look',
-        'show compose','open compose','view compose','check compose',
-        'show draft','view draft','open draft','see draft',
-        'no','nope','not now','later','show me','let me see',
-        "i will check","ill check","i want to see","show it",
+      const isViewCompose = ['view', 'show', 'compose', 'open', 'check', 'see', 'look',
+        'show compose', 'open compose', 'view compose', 'check compose',
+        'show draft', 'view draft', 'open draft', 'see draft',
+        'no', 'nope', 'not now', 'later', 'show me', 'let me see',
+        "i will check", "ill check", "i want to see", "show it",
       ].some(p => lower === p || lower.includes(p));
 
       if (isReadAloud) {
@@ -266,7 +266,7 @@ export function useVoiceController(options: VoiceControllerOptions = {}): VoiceC
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
       let answer = '';
-      let composeData: Record<string, string> | null = null;
+      let composeData: { prompt: string; recipientName?: string; subject?: string; body?: string; to?: string; cc?: string } | null = null;
       let sseError = '';
 
       if (reader) {
@@ -371,9 +371,9 @@ export function useVoiceController(options: VoiceControllerOptions = {}): VoiceC
 
       const rec = new Ctor();
       // Non-continuous: fires onend after each utterance — far more reliable
-      rec.continuous      = false;
-      rec.interimResults  = true;
-      rec.lang            = 'en-US';
+      rec.continuous = false;
+      rec.interimResults = true;
+      rec.lang = 'en-US';
       rec.maxAlternatives = 1;
       recRef.current = rec;
 
