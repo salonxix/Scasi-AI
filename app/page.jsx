@@ -1987,7 +1987,7 @@ export default function Home() {
                   </div>
                 ))}
               </div>
-            )}
+
 
             {/* list header */}
             <div style={{ padding: "16px 24px", borderBottom: "1px solid #E2E8F0", background: "#F8FAFC" }}>
