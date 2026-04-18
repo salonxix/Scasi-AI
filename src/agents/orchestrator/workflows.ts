@@ -483,12 +483,65 @@ Write the email body.`;
             output: { recipientName: intent.recipientName, subject: draftResult.data.subject },
         });
 
+        // Step 3: Try to resolve recipient email from Gmail inbox
+        let resolvedEmail = '';
+        const accessToken = ctx.metadata?.accessToken as string | undefined;
+        if (accessToken && intent.recipientName) {
+            try {
+                const { google } = await import('googleapis');
+                const auth = new google.auth.OAuth2();
+                auth.setCredentials({ access_token: accessToken });
+                const gmail = google.gmail({ version: 'v1', auth });
+
+                // Search inbox for emails from/to this person
+                const searchRes = await gmail.users.messages.list({
+                    userId: 'me',
+                    q: `from:${intent.recipientName} OR to:${intent.recipientName}`,
+                    maxResults: 5,
+                });
+
+                const messages = searchRes.data.messages || [];
+                if (messages.length > 0 && messages[0].id) {
+                    const msg = await gmail.users.messages.get({
+                        userId: 'me',
+                        id: messages[0].id,
+                        format: 'metadata',
+                        metadataHeaders: ['From', 'To'],
+                    });
+                    const headers = msg.data.payload?.headers || [];
+                    const fromHeader = headers.find(h => h.name === 'From')?.value || '';
+                    const toHeader = headers.find(h => h.name === 'To')?.value || '';
+
+                    // Extract email address from "Name <email>" format
+                    const extractEmail = (header: string): string => {
+                        const match = header.match(/<([^>]+@[^>]+)>/);
+                        if (match) return match[1];
+                        const plain = header.match(/([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/);
+                        return plain ? plain[1] : '';
+                    };
+
+                    const nameLower = intent.recipientName.toLowerCase();
+
+                    // Check From header first
+                    if (fromHeader.toLowerCase().includes(nameLower)) {
+                        resolvedEmail = extractEmail(fromHeader);
+                    }
+                    // Then check To header
+                    if (!resolvedEmail && toHeader.toLowerCase().includes(nameLower)) {
+                        resolvedEmail = extractEmail(toHeader);
+                    }
+                }
+            } catch {
+                // Non-fatal — compose still works without email
+            }
+        }
+
         const composeData = {
             prompt: userMessage,
             recipientName: intent.recipientName,
             subject: draftResult.data.subject || intent.subject,
             body: draftResult.data.body,
-            to: '',
+            to: resolvedEmail,
             cc: intent.ccNames?.join(', ') || '',
         };
 

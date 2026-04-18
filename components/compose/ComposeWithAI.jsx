@@ -30,7 +30,8 @@ export default function ComposeWithAI({ emails = [], onClose, session, prefillDa
     const [recipientName, setRecipientName] = useState("");
 
     // Draft fields — all editable
-    const [to, setTo] = useState(prefillData?.to || "");
+    // Use resolved email if available, otherwise show recipient name as placeholder
+    const [to, setTo] = useState(prefillData?.to || prefillData?.recipientName || "");
     const [cc, setCc] = useState(prefillData?.cc || "");
     const [bcc, setBcc] = useState("");
     const [showCc, setShowCc] = useState(!!(prefillData?.cc));
