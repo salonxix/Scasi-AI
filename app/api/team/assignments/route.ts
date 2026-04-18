@@ -4,15 +4,19 @@ import { authOptions } from "../../auth/[...nextauth]/route";
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://vkmvquxxpycwbzkihqbc.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseKey);
+function getSupabase() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+  if (!supabaseUrl || !supabaseKey) throw new Error('Supabase env vars not configured');
+  return createClient(supabaseUrl, supabaseKey);
+}
 
 export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    const supabase = getSupabase();
     const { data: members, error: mErr } = await supabase.from('team_collaborators').select('*');
     const { data: assignments, error: aErr } = await supabase.from('email_assignments').select('*');
 
@@ -48,6 +52,7 @@ export async function POST(req: Request) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { emailId, assignedTo, deadline, notes, priority } = await req.json();
+    const supabase = getSupabase();
 
     // Map assignedTo (which comes from the frontend member ID, but our db uses email or UUIDs).
     // Let's lookup the email of the assignee.
@@ -64,11 +69,11 @@ export async function POST(req: Request) {
     }]).select();
 
     if (error) throw error;
-    
+
     // Increment active tasks via RPC or simply update it
     const { data: memRaw } = await supabase.from('team_collaborators').select('active_tasks_count').eq('id', assignedTo).single();
     if (memRaw) {
-       await supabase.from('team_collaborators').update({ active_tasks_count: (memRaw.active_tasks_count || 0) + 1 }).eq('id', assignedTo);
+      await supabase.from('team_collaborators').update({ active_tasks_count: (memRaw.active_tasks_count || 0) + 1 }).eq('id', assignedTo);
     }
 
     return NextResponse.json({ assignment: data[0] });
@@ -84,7 +89,8 @@ export async function PUT(req: Request) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { name, email } = await req.json();
-    
+    const supabase = getSupabase();
+
     const { data, error } = await supabase.from('team_collaborators').insert([{
       name: name || email.split("@")[0],
       email: email,
@@ -104,7 +110,7 @@ export async function PUT(req: Request) {
       responseRate: data[0].response_rate,
       avatar: "https://ui-avatars.com/api/?name=" + encodeURIComponent(data[0].name)
     };
-    
+
     return NextResponse.json({ member: newMember });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
