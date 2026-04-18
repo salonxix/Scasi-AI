@@ -19,6 +19,7 @@
     "lucide-react": "^1.8.0",
     "next": "16.2.4",
     "next-auth": "^4.24.14",
+    "onnxruntime-web": "^1.24.3",
     "pg": "^8.20.0",
     "react": "19.2.5",
     "react-dom": "19.2.5",
