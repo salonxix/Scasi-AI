@@ -455,13 +455,15 @@ export async function sendEmail(
         const intent = intentResult.data;
 
         // Step 2: Draft the email body directly via LLM
+        const senderName = (ctx.metadata?.senderName as string) || 'Me';
         const draftPrompt = `Recipient: ${intent.recipientName}
 Subject: ${intent.subject}
 Intent: ${intent.intent}
 Tone: ${intent.tone}
+Sender name (use exactly in sign-off, never use placeholders like [Your Name]): ${senderName}
 ${intent.deadline ? `Deadline: ${intent.deadline}` : ''}
 
-Write the email body.`;
+Write the email body. End with "Best regards," on one line, then the sender's name "${senderName}" on the next line.`;
 
         const draftResult = await llmRouter.generateText('reply', draftPrompt, {
             schema: DraftSchema,
