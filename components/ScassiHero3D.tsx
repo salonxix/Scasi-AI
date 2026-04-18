@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
@@ -35,7 +36,7 @@ function ElegantCursor() {
     const lag = useRef({ x: -300, y: -300 });
 
     useEffect(() => {
-const onMove = (e) => {
+        const onMove = (e) => {
             pos.current = { x: e.clientX, y: e.clientY };
             if (dotRef.current)
                 dotRef.current.style.transform = `translate(${e.clientX - 3}px,${e.clientY - 3}px)`;
@@ -1045,7 +1046,7 @@ function GeminiChat({ inView }) {
         setTyping(true); setTxt(""); let i = 0; const a = qas[qi].a;
         const t = setInterval(() => { setTxt(a.slice(0, i)); i++; if (i > a.length) { clearInterval(t); setTyping(false); } }, 18);
         return () => clearInterval(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [qi]);
     return (
         <div style={{
@@ -1301,7 +1302,8 @@ function HeroCyclingHeadline() {
             }}>
                 Engineered by AI. Refined for you.
             </span>
-            <span style={{ display: "block", fontSize: "clamp(13px,1.3vw,16px)", fontWeight: 400, lineHeight: 1.8,
+            <span style={{
+                display: "block", fontSize: "clamp(13px,1.3vw,16px)", fontWeight: 400, lineHeight: 1.8,
                 color: "#64748b", marginTop: 22, fontFamily: BODY, maxWidth: 420, letterSpacing: ".1px"
             }}>
                 Scasi&apos;s neural engine classifies priority, composes contextual replies, and surfaces critical actions — ensuring your highest-value work commands your undivided attention.

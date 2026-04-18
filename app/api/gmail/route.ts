@@ -27,6 +27,13 @@ export async function GET(req) {
     else if (folder === "spam") q = "in:spam";
     else if (folder === "archive") q = "-in:inbox -in:trash -in:spam";
     else if (folder === "starred") q = "is:starred";
+    else if (folder === "primary") q = "in:inbox category:primary";
+    else if (folder === "social") q = "in:inbox category:social";
+    else if (folder === "promotions") q = "in:inbox category:promotions";
+    else if (folder === "updates") q = "in:inbox category:updates";
+    else if (folder === "work") q = "label:work";
+    else if (folder === "finance") q = "label:finance";
+    else if (folder === "personal") q = "label:personal";
     else q = "in:inbox";
 
     // Step 1: Fetch Message IDs

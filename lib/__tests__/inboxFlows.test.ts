@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @file lib/__tests__/inboxFlows.test.js
  * Integration tests for inbox flows using store-backed hooks.

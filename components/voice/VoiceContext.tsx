@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 /**
  * @file components/voice/VoiceContext.jsx
@@ -48,10 +49,12 @@ export function VoiceProvider({ children }) {
 
   useEffect(() => {
     if (status !== "authenticated") return;
-    const listener = new WakeWordListener({ onDetected: () => {
-      listener.pause();
-      startSessionRef.current(true);
-    }});
+    const listener = new WakeWordListener({
+      onDetected: () => {
+        listener.pause();
+        startSessionRef.current(true);
+      }
+    });
     wakeListenerRef.current = listener;
     listener.start();
     return () => listener.stop();

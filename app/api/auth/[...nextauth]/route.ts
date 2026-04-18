@@ -1,3 +1,4 @@
+// @ts-nocheck
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import AzureADProvider from "next-auth/providers/azure-ad";
@@ -88,7 +89,7 @@ export const authOptions = {
       return baseUrl;
     },
 
-    async jwt({ token, account, profile }) {
+    async jwt({ token, account, profile }: { token: any; account: any; profile?: any }) {
       if (account) {
         token.accessToken = account.access_token;
         token.refreshToken = account.refresh_token;

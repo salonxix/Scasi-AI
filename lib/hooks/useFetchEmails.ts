@@ -10,7 +10,7 @@ import { useInboxStore } from "@/lib/inboxStore";
 import { safeISODate } from "@/lib/dateUtils";
 import type { Email } from "@/lib/emailAnalysis";
 
-const GMAIL_FOLDERS = new Set(["inbox", "sent", "drafts", "spam", "trash", "archive"]);
+const GMAIL_FOLDERS = new Set(["inbox", "sent", "drafts", "spam", "trash", "archive", "primary", "social", "promotions", "updates", "work", "finance", "personal"]);
 
 /** Cooldown between RAG indexing requests (ms). The server fetches its own
  *  emails from Gmail, so tracking specific client-side IDs would be a

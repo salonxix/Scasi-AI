@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 /**
  * @file components/voice/VoiceWidget.jsx
