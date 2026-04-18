@@ -1821,16 +1821,17 @@ export default function Home() {
                      </div>
                    </div>
                    <button 
-                     className="btn hover-glow" 
+                     className="btn pri hover-glow" 
                      onClick={() => { setTriageCollapsed(false); runInboxTriage(); }} 
                      disabled={triageLoading} 
                      style={{ 
                        background: "linear-gradient(135deg, #6366F1, #8B5CF6)", 
-                       border: "1px solid rgba(255,255,255,0.1)", color: "#fff", 
+                       border: "1px solid rgba(255,255,255,0.1)", color: "#fff !important", 
                        fontWeight: 800, padding: "12px 24px", borderRadius: 12,
                        boxShadow: "0 4px 15px rgba(139, 92, 246, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
                        transition: "all 0.3s ease", cursor: triageLoading ? "not-allowed" : "pointer",
-                       opacity: triageLoading ? 0.7 : 1, transform: triageLoading ? "scale(0.98)" : "scale(1)"
+                       opacity: triageLoading ? 0.7 : 1, transform: triageLoading ? "scale(0.98)" : "scale(1)",
+                       fontSize: 13,
                      }}
                    >
                      <Ico.Zap /> {triageLoading ? "Analyzing Inbox..." : "Run Executive Triage"}

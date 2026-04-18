@@ -103,3 +103,7 @@
 /* ─ category filter strip ─ */
 .inbox-root .cat-strip { display: flex; gap: 4px; padding: 0 12px 8px; overflow-x: auto; flex-wrap: nowrap; }
 .inbox-root .cat-strip::-webkit-scrollbar { height: 0; }
+
+/* ─ triage / hover-glow button ─ */
+.inbox-root .btn.hover-glow { color: #fff; }
+.inbox-root .btn.hover-glow:hover { background: linear-gradient(135deg, #4F46E5, #7C3AED); color: #fff; border-color: rgba(255,255,255,0.15); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(139,92,246,0.5); }
