@@ -216,45 +216,24 @@ export default function TeamCollaboration({ teamMembers: externalTeamMembers, as
     setAiTyping(true);
 
     try {
-      // Build project context for the AI
-      const projectContext = `Project: ${selectedProject.name}. Members: ${selectedProject.members.length}. ` +
-        `Active tasks: ${assignedEmails.filter(t => selectedProject.members.includes(t.assignedTo) && t.status !== "completed").length}.`;
+      const pendingTasks = assignedEmails.filter(
+        t => selectedProject.members.includes(t.assignedTo) && t.status !== "completed"
+      ).length;
 
-      const res = await fetch("/api/chat", {
+      const projectContext = `Members: ${selectedProject.members.length}. Pending tasks: ${pendingTasks}.`;
+
+      const res = await fetch("/api/team/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userMessage: userMessage,
-          emailContext: undefined,
-          sessionId: undefined,
+          message: userMessage,
+          projectName: selectedProject.name,
+          projectContext,
         }),
       });
 
-      let aiText = "";
-
-      if (res.ok && res.body) {
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buf = "";
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buf += decoder.decode(value, { stream: true });
-          const lines = buf.split("\n");
-          buf = lines.pop() ?? "";
-          for (const line of lines) {
-            if (!line.startsWith("data: ")) continue;
-            try {
-              const ev = JSON.parse(line.slice(6));
-              if (ev.type === "token" && ev.text) aiText += ev.text;
-            } catch { /* skip */ }
-          }
-        }
-      }
-
-      if (!aiText) aiText = "I'm here to help with your project. What would you like to know?";
-      // Clean up any markdown/think tags for display
-      aiText = aiText.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+      const data = await res.json();
+      const aiText = data.answer || "I'm here to help. What would you like to know?";
 
       const aiResponse = {
         text: aiText,
