@@ -199,34 +199,95 @@ export default function TeamCollaboration({ teamMembers: externalTeamMembers, as
     setActiveTab("overview");
   };
 
-  const handleSendProjectNote = () => {
+  const handleSendProjectNote = async () => {
     if (!projectNote.trim() || !selectedProject) return;
-    
-    const isAiTarget = projectNote.toLowerCase().includes("@ai");
-    const updatedProject = { 
-      ...selectedProject, 
-      notes: [...selectedProject.notes, { text: projectNote, author: "You", timestamp: Date.now() }]
+
+    const userMessage = projectNote.trim();
+
+    // Add user message immediately
+    const updatedProject = {
+      ...selectedProject,
+      notes: [...selectedProject.notes, { text: userMessage, author: "You", timestamp: Date.now() }]
     };
-    
     const updatedProjects = teamProjects.map(w => w.id === selectedProject.id ? updatedProject : w);
     saveProjects(updatedProjects);
     setSelectedProject(updatedProject);
     setProjectNote("");
+    setAiTyping(true);
 
-    if (isAiTarget) {
-      setAiTyping(true);
-      setTimeout(() => {
-        const aiResponse = { text: `AI: I've analyzed the recent updates for ${updatedProject.name}. Workload seems stable. Need me to generate any specific task reports?`, author: "Scasi AI", timestamp: Date.now(), isAi: true };
-        const finalProject = { ...updatedProject, notes: [...updatedProject.notes, aiResponse] };
-        setTeamProjects(prev => {
-          const updated = prev.map(w => w.id === finalProject.id ? finalProject : w);
-          localStorage.setItem("scasi_team_workspaces", JSON.stringify(updated));
-          window.dispatchEvent(new Event("teamSync"));
-          return updated;
-        });
-        setSelectedProject(finalProject);
-        setAiTyping(false);
-      }, 1500);
+    try {
+      // Build project context for the AI
+      const projectContext = `Project: ${selectedProject.name}. Members: ${selectedProject.members.length}. ` +
+        `Active tasks: ${assignedEmails.filter(t => selectedProject.members.includes(t.assignedTo) && t.status !== "completed").length}.`;
+
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userMessage: userMessage,
+          emailContext: undefined,
+          sessionId: undefined,
+        }),
+      });
+
+      let aiText = "";
+
+      if (res.ok && res.body) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const lines = buf.split("\n");
+          buf = lines.pop() ?? "";
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            try {
+              const ev = JSON.parse(line.slice(6));
+              if (ev.type === "token" && ev.text) aiText += ev.text;
+            } catch { /* skip */ }
+          }
+        }
+      }
+
+      if (!aiText) aiText = "I'm here to help with your project. What would you like to know?";
+      // Clean up any markdown/think tags for display
+      aiText = aiText.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+
+      const aiResponse = {
+        text: aiText,
+        author: "Scasi AI",
+        timestamp: Date.now(),
+        isAi: true,
+      };
+
+      const finalProject = { ...updatedProject, notes: [...updatedProject.notes, aiResponse] };
+      setTeamProjects(prev => {
+        const updated = prev.map(w => w.id === finalProject.id ? finalProject : w);
+        localStorage.setItem("scasi_team_workspaces", JSON.stringify(updated));
+        window.dispatchEvent(new Event("teamSync"));
+        return updated;
+      });
+      setSelectedProject(finalProject);
+    } catch (err) {
+      console.error("Project hub AI error:", err);
+      const errResponse = {
+        text: "Sorry, I ran into an issue. Please try again.",
+        author: "Scasi AI",
+        timestamp: Date.now(),
+        isAi: true,
+      };
+      const finalProject = { ...updatedProject, notes: [...updatedProject.notes, errResponse] };
+      setTeamProjects(prev => {
+        const updated = prev.map(w => w.id === finalProject.id ? finalProject : w);
+        localStorage.setItem("scasi_team_workspaces", JSON.stringify(updated));
+        return updated;
+      });
+      setSelectedProject(finalProject);
+    } finally {
+      setAiTyping(false);
     }
   };
 
@@ -404,7 +465,7 @@ export default function TeamCollaboration({ teamMembers: externalTeamMembers, as
                     <input 
                       value={projectNote} onChange={e => setProjectNote(e.target.value)} 
                       onKeyDown={e => e.key === "Enter" && handleSendProjectNote()}
-                      placeholder="Type @ai to ask Scasi questions..." 
+                      placeholder="Ask Scasi anything about your project..." 
                       style={{ flex: 1, padding: "14px 16px", borderRadius: 12, border: "1px solid #E2D9F3", fontSize: 14, outline: "none", background: "#FAF8FF" }} 
                     />
                     <button onClick={handleSendProjectNote} style={{ padding: "0 24px", borderRadius: 12, background: "#18103A", color: "white", fontWeight: 800, border: "none", cursor: "pointer" }}>Send</button>
